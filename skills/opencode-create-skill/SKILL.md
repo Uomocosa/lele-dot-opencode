@@ -1,0 +1,144 @@
+---
+name: opencode-create-skill
+description: Create reusable opencode agent skills. Use when the user asks to create a new skill, make a skill for X, or set up agent instructions. ALWAYS evaluates existing alternatives before creating anything new. Enforces maximal generality so skills work across ANY project using this opencode setup.
+disable-model-invocation: true
+---
+
+# Create Skill
+
+You are a skill architect. Your job is to create skills that are **maximally general across projects, maximally reusable**, and never project-specific.
+
+## Phase 1: Community Discovery (MANDATORY)
+
+**Do NOT create a skill until you have searched the community ecosystem.**
+
+1. Search GitHub for relevant opencode skills: `anthropics/skills`, `vercel-labs/skills`, `mattpocock/skills`, `obra/superpowers`.
+
+2. **Verify each source via `webfetch`.** Do not just list names — fetch the repo page or its README to confirm the skill exists, is still maintained, and actually does what the name suggests.
+
+For every match found, report to the user:
+   - Skill name, source repo
+   - What it does (summary)
+   - Your evaluation: does it fully cover the need? Partially? Not at all?
+
+**If an adequate existing skill exists:** Recommend it and stop. Do not create a duplicate.
+
+**Only proceed to Phase 2 if** no existing skill adequately covers the need.
+
+## Phase 2: Generality-first Design
+
+Before writing any file, design the skill to be **project-agnostic**:
+
+### Generality Rules (enforced)
+1. **Zero project-specific identifiers.** No package name, no module path from this project. Use template variables: `{{project_name}}`, `{{module_name}}`, `{{project_root}}`.
+   - **Exception:** Convention/rule skills (whose purpose is to document a specific project's code standards, e.g., `lele-syntax-py`) are allowed to reference project-specific package names and architecture. They should still use template variables where possible.
+   - **Exception:** Tool-name skills (e.g., `pixi`, `cargo`, `npm`) keep their bare name — the tool's interface IS the subject.
+2. **Description-first.** The `description` field must make sense in ANY project. Test: read the description aloud — if it mentions a specific project, rewrite.
+3. **Single responsibility.** One skill = one domain. If the skill does two unrelated things, split it.
+4. **Progressive disclosure.** The `name` + `description` must be enough for an agent to decide whether to load the skill. Put the most critical instructions first.
+5. **`disable-model-invocation`** set to `true` for destructive or high-risk skills.
+6. **Flagging table** (enforced by `/review-skills` command):
+
+| Scenario | Flag |
+|---|---|---|
+| Tool skill uses `[[AGENTS.md::KEY]]` for its own core action (e.g., pixi skill: `[[AGENTS.md::RUN_ALL_TESTS]]` instead of `pixi run pytest`) | 🟡 Flag — obscures the tool's interface |
+| Workflow skill hardcodes a tool command (e.g., git skill: `pixi run pytest` instead of `[[AGENTS.md::RUN_ALL_TESTS]]`) | 🔴 Flag — breaks portability |
+| Convention/pattern skill hardcodes a tool command | 🟡 Flag — same reason, lower severity |
+| Convention/pattern skill hardcodes a language-native toolchain command (e.g., `cargo` for `*-rs`, `pip`/`pytest` for `*-py`, `npm`/`tsc` for `*-ts`) | ✅ No flag — teaching the language's native tooling |
+| Tool skill uses `[[AGENTS.md::KEY]]` for an incidental action (e.g., in a PR checklist) | ✅ No flag |
+| Language-specific skill (`*-py`, `*-rs`, `*-ts`) uses wrong template variables for that language | 🔴 Flag — breaks in target language |
+| Bare-name tool skill that is inherently language-specific (e.g., `pixi` → Python) uses that language's template vars | ✅ No flag — expected for a language-tied tool |
+
+### Structure template
+
+```
+skill-name/
+  SKILL.md            # YAML frontmatter + instructions
+  references/         # Detailed docs, test prompts, edge cases
+  scripts/            # Executable utilities (bash, python, etc.)
+  assets/             # Templates, static files
+```
+
+## Phase 3: Naming & Tiering
+
+Every skill must follow the naming convention so per-project filtering works:
+
+| Pattern | What it means | Example | Permissions filter |
+|---|---|---|---|
+| `opencode-*` | General skill — works for any language/project | `opencode-git-workflow` | `"opencode-*": "allow"` |
+| `*-py` | Python-specific | `remove-dead-code-py` | `"*-py": "allow"` |
+| `*-rs` | Rust-specific | *(future)* | `"*-rs": "allow"` |
+| `*-ts` | TypeScript-specific | *(future)* | `"*-ts": "allow"` |
+| Bare name | Recognizable tool name | `pixi` | `"pixi": "allow"` |
+| `*-{{language_fullname}}` | Tool available in multiple languages (e.g. `grpc-python`, `libp2p-javascript`) | `grpc-rust` | `"*-rust": "allow"` |
+
+### Three tiers of skills
+
+| Tier | Location | Scope | Example |
+|---|---|---|---|
+| **General** (`opencode-*`) | `~/.config/opencode/skills/` | Any project, any language | `opencode-git-workflow` |
+| **Language-specific** (`*-lang`) | `~/.config/opencode/skills/` | Filtered per-project via permissions | `remove-dead-code-py` |
+| **Project-specific** | `.opencode/skills/` in each repo | That project only | Internal conventions |
+
+### Per-project filtering
+
+Each project's `opencode.json` uses `permission.skill` to select which global skills are visible:
+
+```json
+{
+  "permission": {
+    "skill": {
+      "*": "deny",
+      "opencode-*": "allow",
+      "*-py": "allow",
+      "pixi": "allow"
+    }
+  }
+}
+```
+
+Last matching rule wins. Project-specific skills in `.opencode/skills/` are always listed regardless of global permissions.
+
+## Phase 4: Drafting
+
+Create the `SKILL.md` with:
+
+```yaml
+---
+name: skill-name            # lowercase, hyphens, 1-64 chars
+description: |              # 1-1024 chars, must trigger correctly
+  Use when... [trigger conditions]. Works with any project.
+# disable-model-invocation: true
+---
+```
+
+Then the body. Structure it for how agents actually read:
+- Most important instructions FIRST
+- Step-by-step workflow
+- Examples with concrete inputs/outputs
+- Common mistakes and edge cases
+
+### Template variable convention
+
+Use language-agnostic template variables. When the skill IS language-specific (`*-py`, `*-rs`, etc.), use that language's idiom:
+
+| Context | Variable |
+|---------|----------|
+| Unspecified/general | `{{project_name}}`, `{{module_name}}`, `{{project_root}}` |
+| Python (`*-py`) | `{{package}}`, `{{Module}}` |
+| Rust (`*-rs`) | `{{crate}}`, `{{module}}` |
+
+## Phase 5: Validation
+
+| Check | How |
+|-------|-----|
+| Name valid? | Lowercase, hyphens, 1-64 chars, matches directory name |
+| Name follows tier? | General → `opencode-*`, language-specific → `*-lang`, tool → bare name |
+| Description triggers? | Read it cold — would an agent load this for the right task? |
+| Zero project references? | No `my_package` or project-specific identifiers |
+| Reusable? | Would this work if copied to a different repo unchanged? |
+| Commands follow three-signal rule? | For each `bash` block: is it the skill's own subject → concrete tool command, or incidental → `[[AGENTS.md::KEY]]`? |
+| Template vars match language? | `*-py` uses `{{package}}`, general uses `{{project_name}}` |
+| URL freshness? | For every URL in the skill body, `webfetch` it and flag any that return 404 or are unreachable |
+| Version targeting? | A tool skill may declare a target version (e.g., "Targets bevy 0.18"). The version declaration is authoritative — being behind the latest release is not a defect. Version pinning reflects stability requirements, API surface commitments, or migration effort. ✅ No flag |
+| Community check done? | Verifiable by user — webfetch was used to confirm each source |
