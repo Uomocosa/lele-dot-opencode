@@ -141,7 +141,7 @@ Every check below must resolve to a binary yes/no from data on disk. No "would a
 | Check | Pass condition |
 |-------|----------------|
 | Name valid? | Lowercase, hyphens, 1-64 chars. `name` frontmatter == directory basename. |
-| Name follows tier? | `opencode-*` → general. `*-py`/`*-rs`/`*-ts` → language-specific. Bare name → tool. Check against **this project's `<available_skills>` and AGENTS.md manifest**, not external reality. The AGENTS.md examples (e.g., `libp2p` as bare-name) are authoritative. |
+| Name follows tier? | `opencode-*` → general. `*-py`/`*-rs`/`*-ts` → language-specific. Bare name → tool. Check against **this project's `<available_skills>` and AGENTS.md manifest**, not external reality. A bare-name tool is a violation ONLY when another variant of the same tool with a `-{{language_fullname}}` suffix already exists in `<available_skills>`. The `<available_skills>` list is the sole authority — external implementations in other languages are irrelevant. |
 | Zero project references? | No literal package name or project identifier in code blocks or description. Convention/rule skills (`lele-syntax-*` etc.) are exempt — they document project standards. |
 | Commands follow three-signal rule? | For each `bash` block: teaching the skill's own tool → concrete. Incidental project action → `[[AGENTS.md::KEY]]`. Language-native toolchain (`cargo` for `*-rs`, `pytest` for `*-py`, `npm` for `*-ts`) → concrete (explicit exception). |
 | Template vars match language? | General: `{{project_name}}`/`{{project_root}}`/`{{module_name}}`. `*-py`: add `{{package}}`/`{{Module}}`. `*-rs`: add `{{crate}}`/`{{module}}`. Using a general var in a language-specific skill is NOT a violation. |

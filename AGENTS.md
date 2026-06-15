@@ -17,7 +17,7 @@ Tool-name skills (bare, no suffix) like `pixi`, `bevy`, ... are treated as gener
 
 The `*-(language_fullname)` pattern is for tools available in multiple languages. Unlike the compact `*-rs`/`*-py` suffixes, use the full language name so the tool name is distinct.
 
-**Disambiguation rule:** Only use the `-{{language_fullname}}` suffix when a tool exists in two or more languages (e.g., `grpc-rust`, `grpc-python`). If a tool only has a single implementation, use the bare name (e.g., `libp2p`, `pixi`, `bevy`).
+**Disambiguation rule:** The `-{{language_fullname}}` suffix is mandatory when the same tool has two or more language-specific skills in this project's `<available_skills>` (e.g., both `grpc-rust` and `grpc-python` exist). If only one variant of a tool exists in this project, the bare name is mandatory — do NOT add a gratuitous suffix (e.g., `libp2p`, `pixi`, `bevy` are bare because each has exactly one skill). The `<available_skills>` list is the sole authority for this determination — external implementations in other languages are irrelevant.
 
 **Tool permission rule:** Tool skills — both bare-name (`pixi`, `libp2p`) and multi-language (`grpc-rust`) — are NOT matchable by glob patterns. They must be listed by their exact full name in `permission.skill`:
 ```json
