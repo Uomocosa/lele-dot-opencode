@@ -130,15 +130,20 @@ Use language-agnostic template variables. When the skill IS language-specific (`
 
 ## Phase 5: Validation
 
-| Check | How |
-|-------|-----|
-| Name valid? | Lowercase, hyphens, 1-64 chars, matches directory name |
-| Name follows tier? | General → `opencode-*`, language-specific → `*-lang`, tool → bare name |
-| Description triggers? | Read it cold — would an agent load this for the right task? |
-| Zero project references? | No `my_package` or project-specific identifiers |
-| Reusable? | Would this work if copied to a different repo unchanged? |
-| Commands follow three-signal rule? | For each `bash` block: is it the skill's own subject → concrete tool command, or incidental → `[[AGENTS.md::KEY]]`? |
-| Template vars match language? | `*-py` uses `{{package}}`, general uses `{{project_name}}` |
-| URL freshness? | For every URL in the skill body, `webfetch` it and flag any that return 404 or are unreachable |
-| Version targeting? | A tool skill may declare a target version (e.g., "Targets bevy 0.18"). The version declaration is authoritative — being behind the latest release is not a defect. Version pinning reflects stability requirements, API surface commitments, or migration effort. ✅ No flag |
-| Community check done? | Verifiable by user — webfetch was used to confirm each source |
+### Principle of Least Flag
+
+**Only flag clear, mechanical violations.** If you find yourself debating internally whether something is a violation, it passes. False negatives (missing a borderline issue) are acceptable; false positives (flagging correct code) erode trust in the command and create back-and-forth loops. When a check is ambiguous, the answer is "no flag."
+
+### Deterministic checks
+
+Every check below must resolve to a binary yes/no from data on disk. No "would a hypothetical agent..." reasoning.
+
+| Check | Pass condition |
+|-------|----------------|
+| Name valid? | Lowercase, hyphens, 1-64 chars. `name` frontmatter == directory basename. |
+| Name follows tier? | `opencode-*` → general. `*-py`/`*-rs`/`*-ts` → language-specific. Bare name → tool. Check against **this project's `<available_skills>` and AGENTS.md manifest**, not external reality. The AGENTS.md examples (e.g., `libp2p` as bare-name) are authoritative. |
+| Zero project references? | No literal package name or project identifier in code blocks or description. Convention/rule skills (`lele-syntax-*` etc.) are exempt — they document project standards. |
+| Commands follow three-signal rule? | For each `bash` block: teaching the skill's own tool → concrete. Incidental project action → `[[AGENTS.md::KEY]]`. Language-native toolchain (`cargo` for `*-rs`, `pytest` for `*-py`, `npm` for `*-ts`) → concrete (explicit exception). |
+| Template vars match language? | General: `{{project_name}}`/`{{project_root}}`/`{{module_name}}`. `*-py`: add `{{package}}`/`{{Module}}`. `*-rs`: add `{{crate}}`/`{{module}}`. Using a general var in a language-specific skill is NOT a violation. |
+| URL freshness? | For every external URL in the skill body, `webfetch` it. Only 4xx/5xx/unreachable is a violation. Redirects and slow responses are fine. |
+| Version targeting? | Not a check — tool skills may pin a version. Being behind latest is never a violation. |
