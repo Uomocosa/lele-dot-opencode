@@ -20,6 +20,7 @@ For each remaining skill:
 - Name matches the naming convention: `opencode-*` (general), `*-py`/`*-rs`/`*-ts` (language-specific), or bare name (tool).
 - Directory name matches `name` frontmatter field.
 - Description doesn't mention a specific project.
+- **Disambiguation rule:** A bare-name tool is a violation ONLY when another variant of the same tool with a `-{{language_fullname}}` suffix already exists in `<available_skills>`. The `<available_skills>` list is the sole authority — external implementations in other languages are irrelevant. If a tool has exactly one skill in `<available_skills>`, bare name is mandatory and MUST NOT be flagged.
 
 ### Command Abstraction (three-signal rule)
 For every `bash` block or shell command in the skill:
@@ -40,7 +41,7 @@ Decision question: *Would a reader need to see the actual command to learn the t
 - Flag if template variables don't match the language suffix.
 
 ### Generality
-- Zero project-specific identifiers (no package names, no hardcoded paths).
+- Zero project-specific identifiers (no package names, no hardcoded paths). Convention/rule skills (`lele-syntax-*` etc.) are exempt — they document project standards.
 - Description triggers correctly for the intended audience.
 - Single responsibility — one skill = one domain.
 
