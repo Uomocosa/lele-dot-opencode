@@ -143,3 +143,4 @@ Custom commands can override built-in commands (like `/init`, `/help`) by using 
 - **Shell injection without quoting:** `` !`command` `` captures stdout. For multi-line output, pipe or redirect inside the backticks.
 - **Agent name typo:** If the agent specified in frontmatter doesn't exist, the command defaults to the current agent with no error.
 - **`subtask: true` on non-subagent:** Forces a subagent session for the command, keeping the primary context clean.
+- **`mode` is invalid in command frontmatter:** `mode` (`primary`/`subagent`/`all`) is for **agents only**, not commands. The JSON schema rejects unknown command fields (`additionalProperties: false`). Use `subtask: true` to force subagent invocation, or set `agent` to a subagent.

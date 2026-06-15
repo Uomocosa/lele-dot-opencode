@@ -128,6 +128,21 @@ Use language-agnostic template variables. When the skill IS language-specific (`
 | Python (`*-py`) | `{{package}}`, `{{Module}}` |
 | Rust (`*-rs`) | `{{crate}}`, `{{module}}` |
 
+## Phase 6: Post-Creation — Permission Check
+
+After creating the skill, check whether the project's `opencode.json` permissions cover it:
+
+1. Read the project's `opencode.json` (or `opencode.jsonc`) and locate `permission.skill`.
+2. Based on the skill's name pattern:
+   - If it's a **general** skill (`opencode-*`), check that `"opencode-*": "allow"` exists.
+   - If it's **language-specific** (`*-py`/`*-rs`/`*-ts`), check the corresponding glob exists.
+   - If it's a **bare-name tool** (e.g. `pixi`, `libp2p`), check it's listed by exact name.
+   - If it's a **multi-language tool** (`*-{{language_fullname}}`), check it's listed by exact name.
+3. If the permission is missing, propose updating `opencode.json` with the needed rule.
+4. After saving, tell the user to quit and restart opencode for changes to take effect.
+
+Refer to `/update_opencode_json_permissions` for a full scan of all skills vs permissions.
+
 ## Phase 5: Validation
 
 ### Principle of Least Flag

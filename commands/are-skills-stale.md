@@ -1,6 +1,6 @@
 ---
 description: Check if any skill files differ from their cached versions. Reports stale skills that need an opencode reload.
-mode: subagent
+subtask: true
 ---
 
 Read all skills from `<available_skills>` in the system prompt. For each one:
