@@ -1,5 +1,5 @@
 ---
-name: libp2p-rust
+name: libp2p
 description: |
   libp2p networking patterns for Rust peer-to-peer applications. Use when
   working with modules that establish direct p2p connections for
