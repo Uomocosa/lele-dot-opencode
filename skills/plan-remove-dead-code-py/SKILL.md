@@ -1,11 +1,11 @@
 ---
-name: remove-dead-code-py
-description: Find .py files whose primary pub item has zero internal consumers in the package. Detect removal candidates by searching for import references, then delete with verification.
+name: plan-remove-dead-code-py
+description: Find .py files whose primary pub item has zero internal consumers in the package. Detects removal candidates by searching for import references, then presents them for user evaluation.
 disable-model-invocation: true
 ---
 
 ## Goal
-Find and delete files whose primary `pub` item has zero internal consumers in the codebase.
+Find and report files whose primary `pub` item has zero internal consumers in the codebase.
 
 ## Detection Method
 For each `.py` file that defines a class or top-level function:

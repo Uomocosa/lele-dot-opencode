@@ -1,6 +1,7 @@
 ---
-name: remove-dead-code-rs
-description: Find .rs files whose primary pub item has zero internal consumers in src/. Detect removal candidates by searching for use crate:: references, then present them for user review.
+name: plan-remove-dead-code-rs
+description: Find .rs files whose primary pub item has zero internal consumers in src/. Detects removal candidates by searching for use crate:: references, then presents them for user evaluation.
+disable-model-invocation: true
 ---
 
 ## Goal

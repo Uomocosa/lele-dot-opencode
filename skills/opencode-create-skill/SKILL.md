@@ -66,7 +66,7 @@ Every skill must follow the naming convention so per-project filtering works:
 | Pattern | What it means | Example | Permissions filter |
 |---|---|---|---|
 | `opencode-*` | General skill — works for any language/project | `opencode-git-workflow` | `"opencode-*": "allow"` |
-| `*-py` | Python-specific | `remove-dead-code-py` | `"*-py": "allow"` |
+| `*-py` | Python-specific | `plan-remove-dead-code-py` | `"*-py": "allow"` |
 | `*-rs` | Rust-specific | *(future)* | `"*-rs": "allow"` |
 | `*-ts` | TypeScript-specific | *(future)* | `"*-ts": "allow"` |
 | Bare name | Recognizable tool name | `pixi` | `"pixi": "allow"` |
@@ -77,7 +77,7 @@ Every skill must follow the naming convention so per-project filtering works:
 | Tier | Location | Scope | Example |
 |---|---|---|---|
 | **General** (`opencode-*`) | `~/.config/opencode/skills/` | Any project, any language | `opencode-git-workflow` |
-| **Language-specific** (`*-lang`) | `~/.config/opencode/skills/` | Filtered per-project via permissions | `remove-dead-code-py` |
+| **Language-specific** (`*-lang`) | `~/.config/opencode/skills/` | Filtered per-project via permissions | `plan-remove-dead-code-py` |
 | **Project-specific** | `.opencode/skills/` in each repo | That project only | Internal conventions |
 
 ### Per-project filtering
