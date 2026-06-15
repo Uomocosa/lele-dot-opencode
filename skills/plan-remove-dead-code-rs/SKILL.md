@@ -1,6 +1,6 @@
 ---
 name: plan-remove-dead-code-rs
-description: Find .rs files whose primary pub item has zero internal consumers in {{project_root}}/src/. Detects removal candidates by searching for use crate:: references, then presents them for user evaluation.
+description: Find .rs files whose primary pub item has zero internal consumers in a crate's src/. Detects removal candidates by searching for use crate:: references, then presents them for user evaluation.
 disable-model-invocation: true
 ---
 
@@ -8,10 +8,10 @@ disable-model-invocation: true
 Find and report files whose primary `pub` item has zero internal consumers in the codebase.
 
 ## Detection Method
-For each `.rs` file in `{{project_root}}/src/` containing a `pub struct`, `pub enum`, `pub fn`, or `pub type`:
+For each `.rs` file in `src/` containing a `pub struct`, `pub enum`, `pub fn`, or `pub type`:
 
 1. Identify the item name.
-2. Search `{{project_root}}/src/` for all of these patterns:
+2. Search `src/` for all of these patterns:
    - `use crate::` references to that name.
    - `pub use` re-exports of that name (in any `mod.rs` or `lib.rs`).
    - `mod` declarations that reference the file (in any `mod.rs` or `lib.rs`).
