@@ -1,6 +1,6 @@
 ---
 name: lele-syntax-py
-description: My personal Python coding conventions — atomic file structure (*Method/ subpackages), new-import-system, dataclass/enum patterns, pytest conventions with markers, loguru logging, empty __init__.py, PascalCase subpackages, __HELPER_DIR__ assets. Always loaded.
+description: Python coding conventions — atomic file structure (*Method/ subpackages), new-import-system, dataclass/enum patterns, pytest conventions with markers, loguru logging, empty __init__.py, PascalCase subpackages, __HELPER_DIR__ assets.
 ---
 
 # Project Conventions (Python)

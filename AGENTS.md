@@ -10,9 +10,18 @@ Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized int
 |---|---|---|---|
 | **General** | `opencode-*` | `~/.config/opencode/skills/` | Always (any project) |
 | **Language-specific** | `*-py`, `*-rs`, `*-ts` | `~/.config/opencode/skills/` | Filtered per-project via permissions |
+| **Multi-language tool** | `*-(language_fullname)` e.g. `grpc-rust`, `libp2p-rust`, `libp2p-python` | `~/.config/opencode/skills/` | Filtered per-project via permissions |
 | **Project-specific** | Any valid name | `.opencode/skills/` in repo | That project only |
 
 Tool-name skills (bare, no suffix) like `pixi`, `bevy`, ... are treated as general.
+
+The `*-(language_fullname)` pattern is for tools available in multiple languages (libp2p, gRPC, etc.). Unlike the compact `*-rs`/`*-py` suffixes, use the full language name so the tool name is distinct.
+
+**Tool permission rule:** Tool skills — both bare-name (`pixi`) and multi-language (`libp2p-rust`) — are NOT matchable by glob patterns. They must be listed by their exact full name in `permission.skill`:
+```json
+{ "pixi": "allow", "libp2p-rust": "allow" }
+```
+Only the `opencode-*` and `*-py`/`*-rs`/`*-ts` patterns support glob matching. This prevents accidental inclusion of unrelated tool skills.
 
 ## Per-Project Filtering
 

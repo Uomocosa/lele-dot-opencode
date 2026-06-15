@@ -18,19 +18,19 @@ pixi run pytest
 ### Run a Specific Test File
 
 ```bash
-pixi run pytest {{package}}/{{Module}}.py
+pixi run pytest path/to/test.py
 ```
 
 ### Run a Specific Test Function
 
 ```bash
-pixi run pytest {{package}}/{{Module}}.py::test_usage -o "addopts="
+pixi run pytest path/to/test.py::test_function -o "addopts="
 ```
 
 ### Run with Verbose/Print Output
 
 ```bash
-pixi run pytest -s -v {{package}}/{{Module}}.py::test_usage
+pixi run pytest -s -v path/to/test.py::test_function
 ```
 
 ### Run Without Default Marker Filters

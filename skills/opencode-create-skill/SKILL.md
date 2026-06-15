@@ -70,7 +70,7 @@ Every skill must follow the naming convention so per-project filtering works:
 | `*-rs` | Rust-specific | *(future)* | `"*-rs": "allow"` |
 | `*-ts` | TypeScript-specific | *(future)* | `"*-ts": "allow"` |
 | Bare name | Recognizable tool name | `pixi` | `"pixi": "allow"` |
-| `*-{{language_fullname}}` | Tool available in multiple languages (e.g. `grpc-python`, `libp2p-javascript`) | `grpc-rust` | `"*-rust": "allow"` |
+| `*-{{language_fullname}}` | Tool available in multiple languages (e.g. `grpc-python`, `libp2p-javascript`) | `grpc-rust` | Exact full name only (no glob): `"grpc-rust": "allow"` |
 
 ### Three tiers of skills
 
