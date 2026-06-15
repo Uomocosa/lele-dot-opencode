@@ -1,71 +1,80 @@
 ---
-description: Scan all skills on disk, read current opencode.json permissions, and propose glob pattern changes to cover newly added skills.
+description: Audit every skill on disk against the project's purpose and current permissions. For each skill, evaluate whether to add, keep, or remove it.
 subtask: true
 ---
 
-You are auditing skill coverage in this project's `opencode.json`.
+You are auditing which skills should be permitted in this project.
 
 ## Step 1: Find all skills on disk
 
-Use `glob` to find every `SKILL.md` in these locations:
-
+Use `glob` to find every `SKILL.md` in:
 - Global: `~/.config/opencode/skills/*/SKILL.md`
 - Local/project: `.opencode/skills/*/SKILL.md`
 
-Collect every result.
+Collect all results. For each, read the `name` field from YAML frontmatter.
 
-## Step 2: Read each SKILL.md to get the name
+## Step 2: Read the project to understand its purpose
 
-For each skill found, use `read` to get the `name` field from its YAML frontmatter (between the first `---` delimiters). Extract the `name:` value.
+Explore the project root to understand:
+- **Language stack** — look for build/config files: `Cargo.toml`, `package.json`, `pyproject.toml`, `CMakeLists.txt`, `go.mod`, `pixi.toml`, etc.
+- **Purpose and domain** — read `README.md`, `OBJECTIVE.md`, or any project-description files.
+- **Project-specific agent instructions** — read `AGENTS.md` if it exists.
+- **Current permissions** — read `opencode.json` (or `opencode.jsonc`) for the `permission.skill` block.
 
-Collect all names into a full list.
+Identify what the project does and what tools/languages it uses.
 
-## Step 3: Read current opencode.json permissions
+## Step 3: For each skill on disk, report status and evaluate
 
-Read the project's `opencode.json` (or `opencode.jsonc`) from any of these locations:
+Prefix every skill with its current permission status emoji:
 
-- `./opencode.json`
-- `./opencode.jsonc`
-- `.opencode/opencode.json`
+| Emoji | Meaning |
+|-------|---------|
+| ✅ | Allowed in `permission.skill` with `"allow"` |
+| ❌ | Not allowed (explicitly denied or absent from permissions) |
+| 🗑️ | Stale — permission rule exists but skill file not on disk |
 
-Extract the current `permission.skill` object. If no `permission` or `permission.skill` exists, record that as empty.
+### For each non-stale skill, provide:
+- **Add it?** Yes / No / Keep / Remove
+- **Reason to add:** <why it helps the project>
+- **Reason not to add:** <why it doesn't belong>
+- **Reason to remove (if currently allowed):** <why it shouldn't be>
 
-## Step 4: Classify each skill by name pattern
+### For stale skills:
+Just flag them for removal.
 
-For each skill name, classify it into one of these categories:
+## Evaluation guidelines
 
-| Pattern | Category | Matched by |
-|---|---|---|
-| `opencode-*` | General | `"opencode-*": "allow"` glob |
-| `*-py` | Python-specific | `"*-py": "allow"` glob |
-| `*-rs` | Rust-specific | `"*-rs": "allow"` glob |
-| `*-ts` | TypeScript-specific | `"*-ts": "allow"` glob |
-| Bare name (e.g. `pixi`, `libp2p`, `bevy`) | Tool — must be exact | `"pixi": "allow"` (exact) |
-| `*-{{language_fullname}}` (e.g. `grpc-rust`) | Multi-language tool — must be exact | `"grpc-rust": "allow"` (exact) |
+- **General skills** (`opencode-*`): generally beneficial — keep unless they conflict with project rules.
+- **Language-specific** (`*-rs`, `*-py`, `*-ts`): only keep/add if the project uses that language.
+- **Bare-name tools** (`bevy`, `libp2p`, `pixi`): only keep/add if the project uses or is likely to use that tool/framework.
+- **Stale rules**: always recommend removal.
 
-## Step 5: Compare current permissions vs what's needed
+## Output format
 
-For each category:
+```
+Legend:
+✅ = Allowed | ❌ = Not allowed | 🗑️ = Stale (skill not on disk)
 
-- **General (`opencode-*`):** If any skill matches this pattern, the glob `"opencode-*": "allow"` should be present.
-- **Language-specific (`*-py`, `*-rs`, `*-ts`):** If any skill matches, the corresponding glob should be present.
-- **Bare-name tools:** Each must be listed by its exact name.
-- **Multi-language tools (`*-{{language_fullname}}`):** Each must be listed by its exact name.
+✅ opencode-git-workflow
+  → Keep. General skill, always useful.
 
-Report:
-- Which globs/exact names are **missing** (skills exist on disk but not covered by current permissions)
-- Which rules are **redundant** (permissions for tools/skills that no longer exist on disk)
-- Which rules are **correct** (match)
+❌ lele-syntax-py
+  → Skip. Project is Rust-only, Python skills irrelevant.
 
-## Step 6: Propose changes
+🗑️ libp2p-rust
+  → Remove from permissions. No skill named "libp2p-rust" exists on disk.
 
-Present a clear proposal showing:
+❌ libp2p
+  → Add. Project uses libp2p networking; skill provides guidance.
+```
 
-1. The current `permission.skill` block (or note it's missing).
-2. The recommended `permission.skill` block that covers all skills on disk.
-3. A diff-like summary of what changed.
+## Legend
 
-End with: "Would you like me to apply this change to opencode.json?"
+Include this at the bottom:
+
+```
+✅ = Currently allowed in permissions | ❌ = Not allowed (denied or absent) | 🗑️ = In permissions but skill not on disk
+```
 
 ## Notes
 
