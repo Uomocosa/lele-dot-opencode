@@ -61,16 +61,20 @@ skill-name/
 
 ## Phase 3: Naming & Tiering
 
-Every skill must follow the naming convention so per-project filtering works:
+Every skill must follow the naming convention so per-project filtering works.
 
-| Pattern | What it means | Example | Permissions filter |
-|---|---|---|---|
-| `opencode-*` | General skill — works for any language/project | `opencode-git-workflow` | `"opencode-*": "allow"` |
-| `*-py` | Python-specific | `plan-remove-dead-code-py` | `"*-py": "allow"` |
-| `*-rs` | Rust-specific | *(future)* | `"*-rs": "allow"` |
-| `*-ts` | TypeScript-specific | *(future)* | `"*-ts": "allow"` |
-| Bare name | Recognizable tool name | `pixi` | `"pixi": "allow"` |
-| `*-{{language_fullname}}` | Tool available in multiple languages (e.g. `grpc-python`, `libp2p-javascript`) | `grpc-rust` | Exact full name only (no glob): `"grpc-rust": "allow"` |
+### Bare name vs suffix — how to decide
+
+- **Bare name** — the skill teaches a *platform, framework, or tool* (e.g., bevy engine, libp2p networking, pixi package manager, freenet platform). Even if the tool is Rust/Python/TypeScript-only, use bare name — it's a tool skill, not a convention skill.
+- **`*-rs` / `*-py` / `*-ts`** — the skill teaches *code conventions or patterns for that language* (e.g., Rust syntax rules, Python dead code detection, TypeScript patterns). These are language-convention skills.
+- **`*-{{language_fullname}}`** — only when a single tool has two or more language variants in `<available_skills>` (e.g., both `grpc-rust` and `grpc-python`). The suffix disambiguates which language. If only one variant exists, use bare name.
+
+| Pattern | Category | When to use | Example | Permissions filter |
+|---|---|---|---|---|
+| `opencode-*` | General workflow | Commands, git, workflows — any project/language | `opencode-git-workflow` | `"opencode-*": "allow"` (glob) |
+| **Bare name** | **Tool / framework** | **Skill teaches a platform (bevy, freenet, libp2p, pixi). Even if the tool is language-specific, use bare name.** | `bevy`, `libp2p`, `pixi`, `freenet` | `"name": "allow"` (exact) |
+| `*-rs` / `*-py` / `*-ts` | Language conventions | Skill teaches code standards for that language (syntax rules, patterns, dead code removal). NOT a platform/tool. | `lele-syntax-rs`, `plan-remove-dead-code-py` | `"*-rs": "allow"` (glob) |
+| `*-{{lang_full}}` | Multi-lang tool disambiguation | Only when the same tool has 2+ language variants in `<available_skills>` | `grpc-rust`, `grpc-python` | Exact name only (no glob) |
 
 ### Three tiers of skills
 
