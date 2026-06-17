@@ -1,6 +1,6 @@
 ---
 name: freenet
-description: Freenet contract development — WASM contracts, WebSocket client protocol, node modes (local vs network), commutative monoid contract design, pub/sub, fdev/freenet-scaffold tooling, Makefile automation, integration testing, and common pitfalls.
+description: Use when developing Freenet contracts, delegates, or WebSocket clients. Covers WASM contract implementation, commutative monoid design, node modes (local vs network), the fdev tool, Makefile automation, and integration testing.
 ---
 
 # Freenet Development Guide

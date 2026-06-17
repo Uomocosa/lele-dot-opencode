@@ -1,7 +1,6 @@
 ---
 name: plan-remove-dead-code-py
-description: Find .py files whose primary pub item has zero internal consumers in the package. Detects removal candidates by searching for import references, then presents them for user evaluation.
-disable-model-invocation: true
+description: Use when searching for Python files whose primary pub item has zero internal consumers in the package. Searches for import references, then presents candidates for user evaluation.
 ---
 
 ## Goal

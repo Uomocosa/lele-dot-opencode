@@ -1,6 +1,6 @@
 ---
 name: opencode-create-agents
-description: Create, configure, and manage opencode agents — primary (Build, Plan) and subagents invoked via @mention or Task tool. Covers frontmatter fields, permissions, file placement, and creation workflow. Works with any opencode project.
+description: Use when the user asks to create, configure, or manage opencode agents. Covers primary vs subagent modes, frontmatter fields, permissions, file placement, and the agent create workflow. Works with any opencode project.
 ---
 
 # Opencode Agent Operations

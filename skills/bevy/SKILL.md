@@ -1,6 +1,6 @@
 ---
 name: bevy
-description: Bevy engine patterns for projects using the Bevy game engine. Plugin struct+delegate separation, Component/Resource/Message types, system conventions (Res/ResMut/Query/Commands/MessageWriter), testing with App, plugin composition, internal module layout, and derive macro reference for bevy 0.18.
+description: Use when working on projects that depend on the Bevy game engine. Covers Plugin struct+delegate separation, Component/Resource/Message types, system conventions (Res/ResMut/Query/Commands/MessageWriter), testing with App, plugin composition, internal module layout, and derive macros for bevy 0.18.
 ---
 
 # BEVY-SPECIFIC SYNTAX & PATTERNS

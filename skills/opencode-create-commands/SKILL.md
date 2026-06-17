@@ -1,6 +1,6 @@
 ---
 name: opencode-create-commands
-description: Create custom opencode slash commands (/command) for repetitive tasks. Covers markdown and JSON config, template placeholders ($ARGUMENTS, $1-$N), shell injection (!`cmd`), file references (@file), and agent/model routing. Works with any opencode project.
+description: Use when the user asks to create or edit opencode slash commands. Covers markdown and JSON config, template placeholders ($ARGUMENTS, $1-$N), shell injection, file references, and agent routing. Works with any opencode project.
 ---
 
 # Opencode Command Craft

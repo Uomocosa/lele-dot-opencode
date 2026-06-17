@@ -1,6 +1,6 @@
 ---
 name: lele-syntax-rs
-description: Rust project conventions, architecture rules, atomic file structure, naming (echo rule), module flattening, error handling with thiserror, inline testing rules, absolute crate:: imports, no trivial accessors, and no positional fields for ANY Rust project.
+description: Use for Rust code in this project. Enforces atomic file structure (*Method/ naming), echo-rule naming, module flattening, thiserror error handling, inline testing, crate:: imports, no trivial accessors, and no positional fields.
 ---
 
 # SYNTAX & ARCHITECTURE GUIDELINES

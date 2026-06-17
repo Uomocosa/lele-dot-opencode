@@ -1,6 +1,6 @@
 ---
 name: plan-refactor-rs
-description: Scan the available skills catalog for all convention/pattern/rule skills, load each one, then audit every .rs file in src/ for violations against those rules.
+description: Use when auditing Rust source files against all loaded convention/pattern/rule skills. Loads every convention skill, then scans every .rs file in src/ for violations against those rules.
 ---
 
 ## Instructions
