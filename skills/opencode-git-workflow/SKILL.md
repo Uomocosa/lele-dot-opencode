@@ -1,7 +1,6 @@
 ---
 name: opencode-git-workflow
 description: Use when the user asks about git commands, commit messages, branch management, rebasing, merging, resolving merge conflicts, stashing, reverting, or any git workflow. Provides commit message conventions, atomic commit rules, branching strategy, rebase workflow, conflict resolution protocol, stashing patterns, and dangerous-command safeguards.
-disable-model-invocation: true
 ---
 
 # Git Workflow

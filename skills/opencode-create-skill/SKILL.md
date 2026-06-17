@@ -1,7 +1,6 @@
 ---
 name: opencode-create-skill
 description: Create reusable opencode agent skills. Use when the user asks to create a new skill, make a skill for X, or set up agent instructions. ALWAYS evaluates existing alternatives before creating anything new. Enforces maximal generality so skills work across ANY project using this opencode setup.
-disable-model-invocation: true
 ---
 
 # Create Skill
@@ -36,8 +35,7 @@ Before writing any file, design the skill to be **project-agnostic**:
 2. **Description-first.** The `description` field must make sense in ANY project. Test: read the description aloud — if it mentions a specific project, rewrite.
 3. **Single responsibility.** One skill = one domain. If the skill does two unrelated things, split it.
 4. **Progressive disclosure.** The `name` + `description` must be enough for an agent to decide whether to load the skill. Put the most critical instructions first.
-5. **`disable-model-invocation`** set to `true` for destructive or high-risk skills.
-6. **Flagging table** (enforced by `/review-skills` command):
+5. **Flagging table** (enforced by `/review-skills` command):
 
 | Scenario | Flag |
 |---|---|---|
@@ -112,7 +110,6 @@ Create the `SKILL.md` with:
 name: skill-name            # lowercase, hyphens, 1-64 chars
 description: |              # 1-1024 chars, must trigger correctly
   Use when... [trigger conditions]. Works with any project.
-# disable-model-invocation: true
 ---
 ```
 

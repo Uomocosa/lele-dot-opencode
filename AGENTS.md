@@ -6,12 +6,12 @@ This file documents the global skill/agent/command architecture. It applies to e
 
 Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized into three tiers:
 
-| Tier | Naming | Location | Loaded when |
+| Tier | Naming | Location | Visibility |
 |---|---|---|---|
-| **General** | `opencode-*` | `~/.config/opencode/skills/` | Always (any project) |
-| **Language-specific** | `*-py`, `*-rs`, `*-ts` | `~/.config/opencode/skills/` | Filtered per-project via permissions |
-| **Multi-language tool** | `*-(language_fullname)` e.g. `grpc-rust`, `grpc-python` | `~/.config/opencode/skills/` | Filtered per-project via permissions |
-| **Project-specific** | Any valid name | `.opencode/skills/` in repo | That project only |
+| **General** | `opencode-*` | `~/.config/opencode/skills/` | Always listed, never auto-loaded |
+| **Language-specific** | `*-py`, `*-rs`, `*-ts` | `~/.config/opencode/skills/` | Listed per-project via permissions |
+| **Multi-language tool** | `*-(language_fullname)` e.g. `grpc-rust`, `grpc-python` | `~/.config/opencode/skills/` | Listed per-project via permissions |
+| **Project-specific** | Any valid name | `.opencode/skills/` in repo | Listed for that project only |
 
 Tool-name skills (bare, no suffix) like `pixi`, `bevy`, ... are treated as general.
 
