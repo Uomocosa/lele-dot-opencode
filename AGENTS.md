@@ -2,6 +2,10 @@
 
 This file documents the global skill/agent/command architecture. It applies to every opencode session.
 
+## Skill Auto-Loading
+
+When a task matches a skill's description in `<available_skills>`, use the `skill` tool to load it immediately.
+
 ## Skill Architecture
 
 Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized into three tiers:
