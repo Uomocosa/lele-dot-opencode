@@ -1,0 +1,4 @@
+{
+  "name": "libp2p",
+  "description": "libp2p networking patterns for Rust peer-to-peer apps: SwarmBuilder, transport stacks, stream protocols, identity management, hybrid networking integration."
+}

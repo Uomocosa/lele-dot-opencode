@@ -1,0 +1,4 @@
+{
+  "name": "lele-syntax-rs",
+  "description": "Rust code conventions: atomic file structure, echo-rule naming, module flattening, thiserror error handling, inline testing, crate:: imports."
+}

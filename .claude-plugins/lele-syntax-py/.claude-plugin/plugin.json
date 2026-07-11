@@ -1,0 +1,4 @@
+{
+  "name": "lele-syntax-py",
+  "description": "Python code conventions: atomic file structure, new-import-system, dataclass/enum patterns, pytest markers, loguru logging, PascalCase subpackages."
+}

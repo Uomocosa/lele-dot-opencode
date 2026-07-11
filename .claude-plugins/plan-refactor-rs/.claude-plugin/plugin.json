@@ -1,0 +1,4 @@
+{
+  "name": "plan-refactor-rs",
+  "description": "Audit Rust source files against all loaded convention/pattern/rule skills by scanning every .rs file in src/ for violations."
+}

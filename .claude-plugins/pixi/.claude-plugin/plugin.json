@@ -1,0 +1,4 @@
+{
+  "name": "pixi",
+  "description": "Run tests, install dependencies, build the project, and manage the Python environment via pixi: pytest invocation, environment activation, common pixi commands."
+}

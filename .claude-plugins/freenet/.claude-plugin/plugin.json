@@ -1,0 +1,4 @@
+{
+  "name": "freenet",
+  "description": "Freenet contract, delegate, and WebSocket client development: WASM contracts, commutative monoid design, node modes, the fdev tool, Makefile automation, integration testing."
+}

@@ -1,0 +1,4 @@
+{
+  "name": "plan-remove-dead-code-py",
+  "description": "Find Python files whose primary pub item has zero internal consumers in the package, for user evaluation."
+}
