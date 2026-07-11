@@ -34,12 +34,19 @@ my-app/
 
 | Mode | Command | UpdateNotification | Use Case |
 |------|---------|-------------------|----------|
-| Local | `freenet local` | ❌ Skipped (`perform_contract_update` shortcut, no `commit_state_update` → no `send_update_notification`) | Single-client testing |
-| Network | `freenet network --is-gateway --skip-load-from-network --public-network-address 127.0.0.1 --public-network-port 31337` | ✅ Full pipeline | Multi-client / cross-machine |
+| Local | `freenet local` | ❌ Skipped. `Executor::contract_requests` → `perform_contract_update` returns `UpdateResponse` directly, bypasses `commit_state_update` | Single-client testing (no pub/sub needed) |
+| Network | `freenet network --is-gateway ...` | ✅ `start_client_update` → `commit_state_update` → `send_update_notification` | Multi-client / cross-machine |
 
-**Critical:** `freenet local` returns `UpdateResponse` immediately without calling `send_update_notification()`. Subscribers never receive `UpdateNotification`. Always use network mode for multi-client demos.
+**Why local mode skips notifications:** The update handler path differs:
 
-In network mode, the update goes through: `request_router → start_client_update → commit_state_update → send_update_notification`. The `BroadcastStateChange` to network peers (via `BROADCAST_NO_TARGETS`) is separate from local WebSocket notifications and requires peer connections.
+| Mode | Update path | Notification dispatched? |
+|------|-------------|------------------------|
+| Local | `contract_requests` → `perform_contract_update` → returns `UpdateResponse` | ❌ `commit_state_update` is never called |
+| Network | `client_event_handling` → `start_client_update` → `commit_state_update` → `send_update_notification` | ✅ To all local subscribers |
+
+The `send_update_notification` function itself is mode-agnostic — it always dispatches to local subscribers when called. The issue is that local mode's update path never reaches it.
+
+In network mode, the broadcast to P2P peers (via `BroadcastStateChange`) is separate from local WebSocket notifications and requires peer connections.
 
 ## Contract Development
 
@@ -190,7 +197,9 @@ freenet = "0.2"    # Only needed for integration tests
 tempfile = "3"
 ```
 
-**Important:** Put the full `freenet` crate in `[dev-dependencies]`, not `[dependencies]`. It pulls in `wasmtime` → `tikv-jemalloc-sys` which fails to build if the project path contains spaces (configure's `--prefix` rejects them).
+**Important:** Put the full `freenet` crate in `[dev-dependencies]` by default — it pulls in `wasmtime` → `tikv-jemalloc-sys` which fails to build if the project path contains spaces (configure's `--prefix` rejects them).
+
+**Exception:** If your binary starts an in-process node (standalone mode), move `freenet` to `[dependencies]`. Ensure your project path has no spaces (tikv-jemalloc-sys limitation).
 
 ### WebSocket Connection Protocol
 
@@ -308,12 +317,29 @@ fdev website publish
 
 ## Makefile.toml Pattern
 
+### Standalone binary (embedded node — no external freenet CLI needed)
+
 ```toml
 [tasks.build-contract]
 command = "cargo"
 args = ["build", "--release", "--target", "wasm32-unknown-unknown"]
 cwd = "./contract"
 
+[tasks.copy-wasm]
+command = "cp"
+args = ["target/wasm32-unknown-unknown/release/clicker_contract.wasm", "../contract/clicker_contract.wasm"]
+cwd = "./contract"
+dependencies = ["build-contract"]
+
+[tasks.test]
+command = "cargo"
+args = ["test", "--", "--nocapture"]
+dependencies = ["copy-wasm"]
+```
+
+### External freenet CLI (legacy — requires freenet CLI installed)
+
+```toml
 [tasks.start-node]
 command = "bash"
 args = ["-c", "freenet network --is-gateway --skip-load-from-network --public-network-address 127.0.0.1 --public-network-port 31337 &"]
@@ -328,11 +354,15 @@ dependencies = ["build-contract", "start-node", "wait-for-node", "run-client"]
 
 ## Integration Testing
 
-Use `freenet::run_local_node()` to spin an in-process node. Requires `#[tokio::test(flavor = "multi_thread")]` for wasmtime's `spawn_blocking`.
+Requires `#[tokio::test(flavor = "multi_thread")]` for wasmtime's `spawn_blocking`.
+
+### Pattern A — Local mode (no pub/sub, simpler)
+
+Use `freenet::Executor::from_config_local()` + `freenet::run_local_node()`. Quick setup but `UpdateNotification` is NOT dispatched to subscribers.
 
 ```rust
 #[tokio::test(flavor = "multi_thread")]
-async fn test_e2e() {
+async fn test_basic() {
     let temp_dir = tempfile::tempdir().unwrap();
     let config = ConfigArgs {
         mode: Some(OperationMode::Local),
@@ -347,14 +377,64 @@ async fn test_e2e() {
     let executor = Executor::from_config_local(config).await.unwrap();
     let ws_config = WebsocketApiConfig {
         address: IpAddr::V4(Ipv4Addr::LOCALHOST),
-        port: 17510,  // Use non-default port to avoid conflicts
+        port: 17510,
         ..Default::default()
     };
     tokio::spawn(async move { run_local_node(executor, ws_config).await });
     tokio::time::sleep(Duration::from_secs(2)).await;
 
     let mut client = FreenetClient::connect("127.0.0.1", 17510).await.unwrap();
-    // ... test logic
+    // ...
+}
+```
+
+### Pattern B — Network mode (pub/sub works, full pipeline)
+
+Use `freenet::server::serve_client_api_with_listener()` + `NodeConfig::new()` + `freenet::run_network_node()`. Requires a pre-bound `TcpListener` to avoid port conflicts.
+
+```rust
+#[tokio::test(flavor = "multi_thread")]
+async fn test_pub_sub() {
+    use std::net::TcpListener;
+    use freenet::server::serve_client_api_with_listener;
+    use freenet::local_node::NodeConfig;
+    use freenet::run_network_node;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let listener = TcpListener::bind((IpAddr::V4(Ipv4Addr::LOCALHOST), 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+
+    let ws_config = WebsocketApiConfig {
+        address: IpAddr::V4(Ipv4Addr::LOCALHOST),
+        port,
+        ..Default::default()
+    };
+    let clients = serve_client_api_with_listener(ws_config, listener).await.unwrap();
+
+    let args = ConfigArgs {
+        mode: Some(OperationMode::Network),
+        network_api: NetworkArgs {
+            is_gateway: true,
+            skip_load_from_network: true,
+            public_address: Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+            public_port: Some(31337),
+            ..Default::default()
+        },
+        config_paths: ConfigPathsArgs {
+            config_dir: Some(tmp.path().to_path_buf()),
+            data_dir: Some(tmp.path().to_path_buf()),
+            log_dir: Some(tmp.path().to_path_buf()),
+        },
+        ..Default::default()
+    };
+    let config = args.build().await.unwrap();
+    let node_config = NodeConfig::new(config).await.unwrap();
+    let node = node_config.build(clients).await.unwrap();
+    tokio::spawn(async move { run_network_node(node).await.unwrap() });
+    tokio::time::sleep(Duration::from_secs(3)).await;
+
+    let mut client = FreenetClient::connect("127.0.0.1", port).await.unwrap();
+    // ... test logic (UpdateNotification WILL be delivered)
 }
 ```
 
@@ -386,7 +466,7 @@ impl DelegateInterface for MyDelegate {
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | "Contract violates update_state idempotency" + "Marking contract as broken" | `update_state` ignores `data` and increments from `state` | Read new state from `data`, not `state` |
-| No `UpdateNotification` received | Using `freenet local` | Switch to `freenet network --is-gateway ...` |
+| No `UpdateNotification` received | Using local-mode test node (`run_local_node` / `freenet local`). The `perform_contract_update` path returns `UpdateResponse` directly without calling `commit_state_update` → `send_update_notification`. | Use network-mode test node (`serve_client_api_with_listener` + `NodeConfig` + `run_network_node`) or connect to an external `freenet network` node via `--role publish\|subscribe`. |
 | Counter resets to 0 on restart | `Put { state: 0 }` overwrites existing state | Try `Get + subscribe` first; `Put` only on `NotFound` |
 | "unexpected response to get: UpdateNotification { .. }" | Stray notification from other client arrives before GetResponse | Loop on recv, `continue` on `UpdateNotification` |
 | `tikv-jemalloc-sys` configure fails (space in path) | Project path contains spaces | Move `freenet` crate to `[dev-dependencies]` |
