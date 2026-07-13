@@ -1,13 +1,13 @@
 ---
 name: bevy
-description: Use when working on projects that depend on the Bevy game engine. Covers Plugin struct+delegate separation, Component/Resource/Message types, system conventions (Res/ResMut/Query/Commands/MessageWriter), testing with App, plugin composition, internal module layout, and derive macros for bevy 0.18.
+description: Use when working on projects that depend on the Bevy game engine. Covers Plugin struct+delegate separation, Component/Resource/Message types, system conventions (Res/ResMut/Query/Commands/MessageWriter), testing with App, plugin composition, internal module layout, and derive macros for bevy 0.19.
 ---
 
 # BEVY-SPECIFIC SYNTAX & PATTERNS
 
 Bevy engine patterns for Rust projects that depend on `bevy`. This skill may override general conventions where Bevy idioms differ.
 
-**Targets bevy 0.18.** For older versions, adjust `Message`/`MessageWriter`/`MessageReader` to `Event`/`EventWriter`/`EventReader` accordingly. See [bevy releases](https://github.com/bevyengine/bevy/releases) for version history.
+**Targets bevy 0.19.** For older versions, adjust `Message`/`MessageWriter`/`MessageReader` to `Event`/`EventWriter`/`EventReader` accordingly. See [bevy releases](https://github.com/bevyengine/bevy/releases) for version history.
 
 ## 1. Bevy Module & File Patterns
 
@@ -52,6 +52,8 @@ pub struct NetworkState {
     pub connected_peers: Vec<PeerId>,
 }
 ```
+
+**Bevy 0.19 constraint — Resources are Components:** `Resource` is now a subtrait of `Component`; `#[derive(Resource)]` implements both. A type can no longer derive both `#[derive(Component)]` and `#[derive(Resource)]` — split shared data into distinct resource and component types. (The separate-type examples above already follow this required pattern.)
 
 ### Event Types
 
