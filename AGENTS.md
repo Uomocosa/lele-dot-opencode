@@ -2,9 +2,15 @@
 
 This file documents the global skill/agent/command architecture. It applies to every opencode session.
 
-## Skill Auto-Loading
+## Skill Loading (MUST)
 
-When a task matches a skill's description in `<available_skills>`, use the `skill` tool to load it immediately.
+Before answering any question, proposing a plan, or modifying code:
+1. Review `<available_skills>` in your system prompt
+2. Load every skill whose description overlaps with the current topic
+3. Proceed only after loading matching skills
+
+When in doubt, load it — an irrelevant skill costs little context; a skipped
+skill costs correctness.
 
 ## Skill Architecture
 
