@@ -260,8 +260,9 @@ client.send(ContractRequest::Update {
 ### No Request-Response Correlation
 
 Messages arrive FIFO on a single channel. There is no request-response ID matching. When you send `Get { subscribe: true }`, you might receive:
-1. An `UpdateNotification` from another client (before `GetResponse`)
-2. Then the `GetResponse`
+1. A `SubscribeResponse` (confirms subscription before the get result)
+2. An `UpdateNotification` from another client (before `GetResponse`)
+3. Then the `GetResponse`
 
 Always loop on recv and skip unexpected message types:
 
@@ -269,6 +270,7 @@ Always loop on recv and skip unexpected message types:
 loop {
     match recv_with_timeout(client).await? {
         GetResponse { key, state } => break (key, state),
+        SubscribeResponse { .. } => continue,  // subscription confirmation
         UpdateNotification { .. } => continue,  // stray notification
         NotFound { .. } => { sleep(1s); continue; }  // retry or deploy
     }
@@ -475,6 +477,9 @@ impl DelegateInterface for MyDelegate {
 | `#[contract]` macro produces no WASM exports | Missing `freenet-main-contract` feature | Add `features = ["contract", "freenet-main-contract"]` |
 | Contract state changes not persisted | Contract marked broken | `rm -rf ~/.local/share/freenet/db` |
 | Multi-thread runtime required | wasmtime uses `spawn_blocking` | Use `#[tokio::test(flavor = "multi_thread")]` |
+| `Gateway nodes must specify a network port` | `is_gateway: true` but `public_port` is `None` in `NetworkArgs` (required since freenet 0.2.71) | Set `public_port: Some(port)` with a random UDP port: `UdpSocket::bind("0.0.0.0:0")?.local_addr()?.port()` |
+| `unexpected response: SubscribeResponse` when doing Get+Subscribe | When the contract already exists on the network, the node sends `SubscribeResponse` before `GetResponse`. A single `match` on the first response fails. | Loop on recv in `recv_after_get`, `continue` on `SubscribeResponse` until `GetResponse` or `NotFound` arrives |
+| Two gateway nodes on the same machine can't establish P2P | Freenet uses random UDP ports for transport; `public_port` is metadata for `PeerId`, not the actual listen port. NAT-traversal hole punching fails on loopback. | Use separate machines with routable IPs for P2P testing, or Freenet's `turmoil` simulation framework. For CI, use subprocess-based tests that join the real network via public gateways. |
 
 ## Reference
 

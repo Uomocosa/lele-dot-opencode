@@ -267,3 +267,105 @@ Consumers call system functions through the `system` submodule:
 use crate::{{module}}::system;
 system::{{function}}(...);
 ```
+
+## 8. Command Pattern: Core Logic + Wrapper Systems
+
+When implementing actions that can be triggered from multiple sources (GUI clicks, CLI commands, keyboard input, network messages), separate the **core logic** from the **input handling**.
+
+### Structure
+
+```
+module/
+  system/
+    increment.rs              # Core logic (pure function)
+    increment_button.rs       # GUI wrapper (calls increment)
+    increment_cli.rs          # CLI wrapper (calls increment)
+```
+
+### Core Logic Function
+
+The core logic is a **pure function** with no Bevy system parameters (or minimal ones like `&mut State`). Named after the action itself:
+
+```rust
+// system/increment.rs
+use crate::clicker::resource::State::ClickerState;
+
+pub fn increment(state: &mut ClickerState, amount: u64) {
+    state.count = state.count.wrapping_add(amount);
+    let _ = state.cmd_tx.send(ClickerCommand::Increment { count: state.count });
+}
+```
+
+**Key rules:**
+- No `Query`, `Res`, `Commands`, or other Bevy system parameters
+- Takes plain Rust types (`&mut T`, `u64`, etc.)
+- Named after the action (e.g., `increment`, `spawn_enemy`, `apply_damage`)
+- Easily testable without Bevy `App`
+
+### Wrapper Systems
+
+Wrapper systems are **thin Bevy systems** that extract input and call the core logic. Named with a suffix indicating the trigger source:
+
+```rust
+// system/increment_button.rs
+use bevy::prelude::*;
+use crate::clicker::gui::component::IncrementButton;
+use crate::clicker::resource::State::ClickerState;
+use super::increment::increment;
+
+pub fn increment_button(
+    interaction: Query<&Interaction, (Changed<Interaction>, With<IncrementButton>)>,
+    mut state: ResMut<ClickerState>,
+) {
+    for interaction in &interaction {
+        if *interaction == Interaction::Pressed {
+            increment(&mut state, 1);
+        }
+    }
+}
+```
+
+```rust
+// system/increment_cli.rs
+use bevy::prelude::*;
+use crate::clicker::resource::State::ClickerState;
+use super::increment::increment;
+
+pub fn increment_cli(
+    mut cmd: ConsoleCommand<IncrementArgs>,
+    mut state: ResMut<ClickerState>,
+) {
+    if let Some(Ok(IncrementArgs { amount })) = cmd.take() {
+        increment(&mut state, amount);
+    }
+}
+```
+
+### Naming Convention
+
+| Function | Location | Naming |
+|----------|----------|--------|
+| Core logic | `system/{action}.rs` | `{action}` (e.g., `increment`) |
+| GUI wrapper | `system/{action}_button.rs` | `{action}_button` |
+| CLI wrapper | `system/{action}_cli.rs` | `{action}_cli` |
+| Keyboard wrapper | `system/{action}_key.rs` | `{action}_key` |
+| Network wrapper | `system/{action}_network.rs` | `{action}_network` |
+
+### Benefits
+
+1. **Single source of truth**: Core logic lives in one place
+2. **Easy testing**: Test the pure function directly, no Bevy `App` needed
+3. **Multiple input sources**: GUI, CLI, keyboard, network all call the same logic
+4. **Clear separation**: Input handling (Bevy systems) vs business logic (pure functions)
+
+### When to Use
+
+Use this pattern when:
+- An action can be triggered from multiple sources
+- You want to test the logic without Bevy
+- The logic is complex enough to warrant isolation
+
+Skip this pattern when:
+- The action is trivial (e.g., just incrementing a counter by 1)
+- There's only one input source
+- The logic is tightly coupled to Bevy types (e.g., spawning entities)
