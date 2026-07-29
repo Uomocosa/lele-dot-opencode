@@ -13,28 +13,37 @@ Bevy engine patterns for Rust projects that depend on `bevy`. This skill may ove
 
 ### Plugin Struct + Delegate Separation
 
-Separate the Plugin struct definition from its `impl Plugin for ...` trait implementation. The trait impl in `structs/{{module}}/plugin.rs` is a thin delegate calling a free function in `methods/{{module}}/plugin/` per the atomic file structure rule:
+Separate the Plugin struct definition from its `impl Plugin for ...` trait implementation. Both files live in the domain folder. The thin delegate calls a private sibling method file:
 
 ```
-structs/{{module}}/
-  plugin.rs                    # struct Plugin { ... }
-                               # + #[rustfmt::skip] impl Plugin for Plugin { fn build(...) {
-                               #     crate::methods::{{module}}::plugin::build(self, app) } }
-methods/{{module}}/
-  plugin/
-    mod.rs                     # pub mod declarations + pub use flattening
-    build.rs                   # pub fn build(plugin: &Plugin, app: &mut App)
+{{module}}/
+  plugin.rs                    # struct Plugin + Default + thin delegates
+  plugin_build.rs              # fn build(plugin, app) + test_usage  (PRIVATE module)
 ```
 
-- The function file inside `methods/{{module}}/plugin/` follows snake_case naming — e.g., `build.rs` for `fn build()`.
-- The thin delegate `impl Plugin for ...` block in `plugin.rs` MUST be annotated with `#[rustfmt::skip]`.
+```rust
+// {{module}}/plugin.rs
+use super::plugin_build;
+use bevy::prelude::*;
+
+pub struct Plugin;
+
+#[rustfmt::skip]
+impl bevy::prelude::Plugin for Plugin {
+    fn build(&self, app: &mut App) { plugin_build::build(self, app) }
+}
+```
+
+- The method file is `{{module}}/plugin_build.rs` — `<struct>_<method>.rs` naming.
+- The thin delegate `impl Plugin for ...` block MUST be annotated with `#[rustfmt::skip]`.
+- `plugin_build` is a PRIVATE module (`mod` in mod.rs) — only callable through the thin delegate.
 
 ### Component, Resource, and Event Types
 
-All Bevy type-defining structs and enums live as peers in `structs/{{module}}/` — no `component/` or `resource/` subdirectories. The `#[derive(...)]` macro is sufficient to convey the type's role.
+All Bevy type-defining structs and enums live as files in the domain folder — no `component/` or `resource/` subdirectories. The `#[derive(...)]` macro is sufficient to convey the type's role.
 
 ```rust
-// structs/{{module}}/click_counter.rs
+// {{module}}/click_counter.rs
 use bevy::prelude::Component;
 
 #[derive(Component)]
@@ -42,7 +51,7 @@ pub struct ClickCounter { pub count: u32 }
 ```
 
 ```rust
-// structs/{{module}}/network_state.rs
+// {{module}}/network_state.rs
 use bevy::prelude::Resource;
 
 #[derive(Resource)]
@@ -52,7 +61,7 @@ pub struct NetworkState {
 ```
 
 ```rust
-// structs/{{module}}/event.rs
+// {{module}}/event.rs
 use bevy::prelude::Message;
 
 #[derive(Message, Debug, Clone)]
@@ -70,16 +79,16 @@ Events are consumed via `MessageWriter<T>` / `MessageReader<T>` (the newer Bevy 
 
 ## 2. Bevy System Conventions
 
-Systems are plain functions living in `system/{{module}}/`. File naming follows the function name (snake_case).
+Systems are plain functions living in the domain folder. File naming follows the function name (snake_case).
 
 ### System Parameters
 
 Use `Res<T>` / `ResMut<T>` for resources, `Query<&T, &mut T>` for components, `Commands` for spawning, `MessageWriter<T>` / `MessageReader<T>` for events:
 
 ```rust
-// system/{{module}}/poll_network.rs
+// {{module}}/poll_network.rs
 use bevy::prelude::*;
-use crate::structs::{{module}}::{Session, RemoteInputBuffer, NetworkState, PeerState, Event};
+use crate::{{module}}::{Session, RemoteInputBuffer, NetworkState, PeerState, Event};
 
 pub fn poll_network(
     mut session: ResMut<Session>,
@@ -95,20 +104,19 @@ pub fn poll_network(
 Register systems with `app.add_systems()` inside the Plugin's `build` method:
 
 ```rust
-// methods/{{module}}/plugin/build.rs
+// {{module}}/plugin_build.rs
 use bevy::prelude::*;
-use crate::structs::{{module}}::{Plugin, Tick, NetworkState, Session};
-use crate::system::{{module}};
+use crate::{{module}}::{Plugin, Tick, NetworkState, Session};
 
 pub fn build(_plugin: &Plugin, app: &mut App) {
     app.init_resource::<Tick>()
        .init_resource::<NetworkState>()
        .insert_resource(Session::new(...))
        .add_systems(FixedUpdate, (
-           {{module}}::poll_network,
-           {{module}}::log_peer_count,
-           {{module}}::broadcast,
-           {{module}}::apply_remote_inputs,
+           crate::{{module}}::poll_network,
+           crate::{{module}}::log_peer_count,
+           crate::{{module}}::broadcast,
+           crate::{{module}}::apply_remote_inputs,
        ));
 }
 ```
@@ -120,9 +128,9 @@ Use `FixedUpdate` for fixed-timestep game logic, `Update` for per-frame UI/input
 When a system requires a Bevy `App` context, construct a minimal working `App` inside the test:
 
 ```rust
-// system/{{module}}/detect_click.rs
+// {{module}}/detect_click.rs
 use bevy::prelude::*;
-use crate::structs::{{module}}::{Owner, ClickCounter};
+use crate::{{module}}::{Owner, ClickCounter};
 
 pub fn detect_click(
     mut query: Query<(&Owner, &mut ClickCounter, &GlobalTransform)>,
@@ -215,82 +223,97 @@ app.add_plugins((
 | `#[derive(Message)]` | struct/enum | Marks type as a Bevy event message |
 | `#[derive(Bundle)]` | struct (optional) | Groups multiple components (use raw tuples instead by convention) |
 
-## 6. Internal Subfolder Convention
+## 6. Internal Domain Layout
 
-Every crate MUST follow the three-tree layout. Types live in `structs/`, method implementations in `methods/`, and systems in `system/`. Each tree mirrors the domain module hierarchy — create a module entry only when it has content (sparse trees).
+Every domain lives in a single folder under `src/`. Structs, methods, systems, and types are all co-located. No `structs/`/`methods/`/`system/` split.
 
 ```
 src/
-  lib.rs                         # pub mod structs; pub mod methods; pub mod system;
-  structs/                       # all type definitions
-    {{module}}/
-      mod.rs
-      plugin.rs                  # struct Plugin + thin delegates
-      config.rs                  # struct Config + Default + thin delegates
-      event.rs                   # #[derive(Message)] enum Event
-      peer_state.rs              # #[derive(Resource)] struct PeerState + thin delegates
-      click_counter.rs           # #[derive(Component)] struct ClickCounter
-      ...
-  methods/                       # method free functions (per-struct directories)
-    {{module}}/
-      mod.rs
-      plugin/
-        mod.rs
-        build.rs                 # pub fn build(plugin: &Plugin, app: &mut App)
-      config/
-        mod.rs
-        new.rs
-        coop.rs
-      peer_state/
-        mod.rs
-        accept_peer.rs
-        add_connected_peer.rs
-      ...
-  system/                        # Bevy systems and module-level free functions
-    {{module}}/
-      mod.rs
-      poll_network.rs
-      broadcast.rs
-      detect_click.rs
-      ...
+  lib.rs                         # pub mod {{module}}; + crate-level re-exports
+  {{module}}/                    # domain folder
+    mod.rs
+    plugin.rs                    # struct Plugin + Default + thin delegates
+    plugin_build.rs              # fn build + test_usage  (PRIVATE)
+    config.rs                    # struct Config + Default + thin delegates
+    config_new.rs                # fn new + test_usage  (PRIVATE)
+    config_coop.rs               # fn coop + test_usage  (PRIVATE)
+    peer_state.rs                # #[derive(Resource)] struct PeerState + thin delegates
+    peer_state_accept_peer.rs    # method  (PRIVATE)
+    click_counter.rs             # #[derive(Component)] struct ClickCounter
+    event.rs                     # #[derive(Message)] enum Event
+    poll_network.rs              # system function  (PUBLIC)
+    broadcast.rs                 # system function  (PUBLIC)
+    detect_click.rs              # system function  (PUBLIC)
 ```
 
-Items in `system/{{module}}/` are NOT re-exported at the module root. Consumers import them through the `system` submodule:
+**Visibility rules:**
+- Struct types → `pub mod <name>;` + `pub use <name>::<Type>;` in mod.rs (public)
+- Method files → `mod <struct>_<method>;` in mod.rs (PRIVATE)
+- System functions → `pub mod <name>;` + `pub use <name>::<name>;` in mod.rs (public)
+- Pure enums → `pub mod <name>;` + `pub use <name>::<Type>;` in mod.rs (public)
+
+**mod.rs example:**
 ```rust
-use crate::system::{{module}};
+mod plugin;
+mod plugin_build;
+mod config;
+mod config_new;
+mod config_coop;
+mod peer_state;
+mod peer_state_accept_peer;
+mod click_counter;
+mod event;
+pub mod poll_network;
+pub mod broadcast;
+pub mod detect_click;
+
+pub use click_counter::ClickCounter;
+pub use config::Config;
+pub use event::Event;
+pub use peer_state::PeerState;
+pub use plugin::Plugin;
+pub use poll_network::poll_network;
+pub use broadcast::broadcast;
+pub use detect_click::detect_click;
+```
+
+**Consumer imports:**
+```rust
+use crate::{{module}}::Plugin;
+use crate::{{module}};
 {{module}}::poll_network(...);
 ```
 
-Methods in `methods/{{module}}/{{type}}/` are never imported directly — they are called exclusively through the struct's thin delegates in `structs/{{module}}/{{type}}.rs`.
+Method files are never imported directly — they are called exclusively through the struct's thin delegates.
 
 ## 7. System Placement
 
 ### Definition
-A **system function** is any function registered with `app.add_systems()` inside a `methods/{{module}}/plugin/build.rs` file.
+A **system function** is any function registered with `app.add_systems()` inside a `{{module}}/plugin_build.rs` file.
 
 ### Placement Rules
 
 | Function type | Location | Example |
 |---|---|---|
-| Registered in `add_systems()` | `system/{{module}}/` | `poll_network.rs` |
-| Plain helper (no SystemParams) | Inline in the calling system file, or as a level file in `system/{{module}}/` | `handle_incoming_message.rs` |
+| Registered in `add_systems()` | `{{module}}/` | `poll_network.rs` |
+| Plain helper (no SystemParams) | Inline in the calling system file, or as a level file in `{{module}}/` | `handle_incoming_message.rs` |
 | Internal builder/spawn helper used only by one system | Same file as the calling system (private helper) | `spawn_remote_player` inside `handle_player_join.rs` |
 
 A function that takes a Bevy type as a plain reference (e.g., `&ButtonInput<KeyCode>`) is NOT a system — it is a helper.
 
 ### Consumer Imports
 
-Systems registered in `system/{{module}}/` must be imported through the `system` submodule:
+Systems registered in `{{module}}/` must be imported through the domain module:
 ```rust
-// methods/{{module}}/plugin/build.rs
-use crate::system::{{module}};
+// {{module}}/plugin_build.rs
+use crate::{{module}};
 
 {{module}}::poll_network
 ```
 
-Plain helpers in `system/{{module}}/` are imported directly:
+Plain helpers in `{{module}}/` are imported directly:
 ```rust
-use crate::system::{{module}}::handle_incoming_message;
+use crate::{{module}}::handle_incoming_message;
 ```
 
 ## 8. Command Pattern: Core Logic + Wrapper Systems
@@ -298,7 +321,7 @@ use crate::system::{{module}}::handle_incoming_message;
 Separate **core logic** (pure functions) from **input handling** (Bevy systems) when an action can be triggered from multiple sources.
 
 ```
-system/{{module}}/
+{{module}}/
   increment.rs              # Core logic (pure function)
   increment_button.rs       # GUI wrapper (calls increment)
   increment_cli.rs          # CLI wrapper (calls increment)
@@ -309,8 +332,8 @@ system/{{module}}/
 Pure function with no Bevy system parameters. Named after the action:
 
 ```rust
-// system/{{module}}/increment.rs
-use crate::structs::{{module}}::ClickerState;
+// {{module}}/increment.rs
+use crate::{{module}}::ClickerState;
 
 pub fn increment(state: &mut ClickerState, amount: u64) {
     state.count = state.count.wrapping_add(amount);
@@ -329,10 +352,10 @@ pub fn increment(state: &mut ClickerState, amount: u64) {
 Thin Bevy systems that extract input and call the core logic. Named with a suffix indicating the trigger source:
 
 ```rust
-// system/{{module}}/increment_button.rs
+// {{module}}/increment_button.rs
 use bevy::prelude::*;
-use crate::structs::{{module}}::IncrementButton;
-use crate::structs::{{module}}::ClickerState;
+use crate::{{module}}::IncrementButton;
+use crate::{{module}}::ClickerState;
 use super::increment;
 
 pub fn increment_button(
@@ -351,11 +374,11 @@ pub fn increment_button(
 
 | Function | Location | Naming |
 |----------|----------|--------|
-| Core logic | `system/{module}/{action}.rs` | `{action}` (e.g., `increment`) |
-| GUI wrapper | `system/{module}/{action}_button.rs` | `{action}_button` |
-| CLI wrapper | `system/{module}/{action}_cli.rs` | `{action}_cli` |
-| Keyboard wrapper | `system/{module}/{action}_key.rs` | `{action}_key` |
-| Network wrapper | `system/{module}/{action}_network.rs` | `{action}_network` |
+| Core logic | `{module}/{action}.rs` | `{action}` (e.g., `increment`) |
+| GUI wrapper | `{module}/{action}_button.rs` | `{action}_button` |
+| CLI wrapper | `{module}/{action}_cli.rs` | `{action}_cli` |
+| Keyboard wrapper | `{module}/{action}_key.rs` | `{action}_key` |
+| Network wrapper | `{module}/{action}_network.rs` | `{action}_network` |
 
 ### When to Use
 

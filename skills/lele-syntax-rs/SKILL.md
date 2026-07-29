@@ -1,6 +1,6 @@
 ---
 name: lele-syntax-rs
-description: Use for Rust code in this project. Enforces atomic file structure (snake_case files everywhere, structs/methods/system split), echo-rule naming, module flattening, thiserror error handling, inline testing, crate:: imports, no trivial accessors, and no positional fields.
+description: Use for Rust code in this project. Enforces atomic file structure (snake_case files everywhere, co-located domain folders), echo-rule naming, module flattening, thiserror error handling, inline testing, crate:: imports, no trivial accessors, and no positional fields.
 ---
 
 # SYNTAX & ARCHITECTURE GUIDELINES
@@ -11,11 +11,11 @@ All examples use template variables to remain project-agnostic:
 
 | Variable | Meaning | Example replacement |
 |---|---|---|
-| `{{module}}` | Domain module path | `p2p`, `boxes`, `sync` |
+| `{{module}}` | Domain module path | `clicker`, `player`, `combat` |
 | `{{Type}}` | PascalCase type name | `Config`, `Credentials` |
 | `{{type}}` | snake_case type name (lowercase of `{{Type}}`) | `config`, `credentials` |
 | `{{function}}` | snake_case function name | `authenticate`, `broadcast` |
-| `{{submodule}}` | Subdirectory name (primarily `system`) | `system` |
+| `{{subfolder}}` | User-chosen subfolder within a domain | `plugin`, `gui` |
 | `{{crate}}` | Crate name (snake_case) | `my_crate`, `bevy_p2p` |
 
 Replace these with actual names from your project. Never use template variables literally in code — the compiler will reject them.
@@ -24,100 +24,167 @@ Replace these with actual names from your project. Never use template variables 
 This file's rules override standard Rust conventions. Treat this file as the absolute source of truth for architecture, naming, file structure, and error handling.
 
 ## 2. Domain / Feature Mapping
-The project is divided into isolated domain/feature modules. In these rules, we use `{{module}}` as a template variable meaning "your domain module path" (e.g., `p2p`, `boxes`, `sync`). **IMPORTANT: `{{module}}` is not valid Rust syntax. Never use it literally — you must replace it with the actual module name.**
+The project is divided into isolated domain/feature modules. Each domain lives in a single folder under `src/` (e.g., `src/clicker/`, `src/player/`). Structs, their methods, system functions, and supporting types are all co-located in the domain folder. There is no `structs/`/`methods/`/`system/` split — everything for a domain lives together. In these rules, we use `{{module}}` as a template variable meaning "your domain folder path" (e.g., `clicker`, `player`). **IMPORTANT: `{{module}}` is not valid Rust syntax. Never use it literally — you must replace it with the actual module name.**
+
+Cross-cutting types that span domains may live in a dedicated module (e.g., `common/`). Do not invent root modules.
 
 ## 3. Atomic File Structure & Naming (CRITICAL)
 
 Every file must contain exactly **one** primary logic unit (one function, one struct, or one enum).
 **Rule:** The filename MUST have the exact same name as the core item inside it.
 
-### Three-Tree Layout
+### Domain Layout (Co-located)
 
-The crate source is split into three parallel trees:
+All code for a domain module lives in a single flat folder:
 
 ```
 src/
-  lib.rs                      # pub mod structs; pub mod methods; pub mod system;
-  structs/                    # type definitions only
-    {{module}}/
-      {{type}}.rs             # struct/enum definition + Default + thin delegates
-  methods/                    # free function implementations of struct methods
-    {{module}}/
-      {{type}}/               # one directory per struct with methods
-        mod.rs                # pub mod declarations + pub use flattening
-        {{function}}.rs       # pub fn {{function}}(...) -> ...
-  system/                     # Bevy systems and module-level free functions
-    {{module}}/
-      {{function}}.rs         # pub fn {{function}}(...)
+  lib.rs                         # pub mod {{module}}; + crate-level re-exports
+  {{module}}/                    # domain folder — structs, methods, systems, types all co-located
+    mod.rs
+    {{type}}.rs                  # struct definition + Default + thin delegates
+    {{type}}_{{function}}.rs     # method free function + test_usage  (PRIVATE module)
+    {{name}}.rs                  # pure enum / error type / message struct
+    {{function}}.rs              # system function or domain-level free function  (PUBLIC)
+    constants.rs                 # grouped module-level constants  (optional)
 ```
 
-**Sparse trees** — a module appears only in the trees where it has content. If a module has no structs, skip `structs/<module>/`. If it has no Bevy systems, skip `system/<module>/`.
+**All filenames are snake_case.** Every file and directory name in the crate MUST use snake_case. Type names (struct, enum, trait) are still PascalCase in Rust source code — the filename is the snake_case equivalent. No `#[path]` attributes, no `non_snake_case = "allow"` — since all filenames are snake_case, `pub mod config;` naturally resolves to `config.rs` with no collision.
 
-### All Files Are snake_case
+### Struct File (`{{module}}/{{type}}.rs`)
 
-Every file and directory name in the crate MUST use snake_case. There is no PascalCase anywhere in the filesystem. Type names themselves (struct, enum, trait) are still PascalCase in Rust source code — the filename is the snake_case equivalent.
+Contains struct definition, `impl Default` (real body, if any), associated constants (real bodies), plus ALL other `impl` blocks as **thin delegates** calling sibling method files. No method bodies, no business logic, no tests.
 
-**No `#[path]` attributes, no `non_snake_case = "allow"`** — since all filenames are snake_case, `pub mod config;` naturally resolves to `config.rs` with no collision.
-
-### File Naming Rules
-
-- **Structs/Enums:** Filename is the snake_case of the type name (e.g., `config.rs` for `pub struct Config`, `peer_state.rs` for `pub struct PeerState`).
-- **Functions:** Filename exactly matches the function name (e.g., `authenticate.rs` for `pub fn authenticate`).
-- **Method directories:** Named as the snake_case of the struct type (e.g., `config/` for `Config`'s methods, `peer_state/` for `PeerState`'s methods).
-
-### Struct Decomposition
-
-**Mandatory for every struct with impls.** If a struct has any hand-written `impl` blocks (inherent or trait), you MUST decompose. `#[derive(...)]` macros do NOT trigger decomposition — only visible, hand-written `impl` blocks count.
-
-**Structure:**
-- `structs/{{module}}/{{type}}.rs` — struct definition, `impl Default` (if any, real body), associated constants (real bodies), plus ALL other `impl` blocks as **thin delegates** calling `crate::methods::{{module}}::{{type}}::{{function}}()`. No method bodies, no business logic, no tests.
-- `methods/{{module}}/{{type}}/{{function}}.rs` — one free function per method, matching the method name exactly. Body and inline test live here.
-- `methods/{{module}}/{{type}}/mod.rs` — module declarations plus `pub use` flattening so callers can write `config::new()` instead of `config::new::new()`.
-
-> **Why `impl Default` is an exception:** `Default` is uniformly trivial (one-liner constructor or literal fields), exempt from testing as a trivial method (Rule 8), and `{{type}}.rs` with only `impl Default` + thin delegates is exempt from the struct-level `test_usage` requirement (Rule 8). Extracting `Default` would add a file for no architectural benefit.
+> **Why `impl Default` is an exception:** `Default` is uniformly trivial (one-liner constructor or literal fields), exempt from testing as a trivial method (Rule 8), and `{{type}}.rs` with only `impl Default` + thin delegates is exempt from the struct-level `test_usage` requirement (Rule 8).
 
 > **`#[rustfmt::skip]` on thin delegate impl blocks:** Annotate every thin delegate `impl` block with `#[rustfmt::skip]` to preserve one-liner format. The `impl Default` block (real body) is NOT skipped.
 
-> **Clarification — struct def goes in `structs/{{module}}/{{type}}.rs`, not in mod.rs:** The struct definition MUST live in its own `.rs` file under `structs/`. Never put it inside a `mod.rs`. This keeps mod.rs pure per Rule 6.
+> **Clarification — struct def goes in `{{module}}/{{type}}.rs`, not in mod.rs:** The struct definition MUST live in its own `.rs` file. Never put it inside a `mod.rs`. This keeps mod.rs pure per Rule 6.
 
-**Example (directory layout only):**
-```
-structs/p2p/
-  config.rs             # struct Config + Default + thin delegate impl blocks
-methods/p2p/
-  config/
-    mod.rs              # pub mod declarations + pub use flattening
-    new.rs              # pub fn new() -> Config + tests
-    coop.rs             # pub fn coop() -> Config + tests
-    with_timeout.rs     # pub fn with_timeout(cfg: Config, ms: u64) -> Config + tests
-```
+**Layout (in order):**
+1. `struct` definition
+2. `impl TypeName { pub const ... }` — associated constants, real bodies
+3. `impl Default` — real body
+4. All other `impl` blocks — thin delegates
 
-**Thin delegate example:**
+**Example:**
+
 ```rust
-// structs/p2p/config.rs
-use crate::methods::p2p::config as config_method;
+// {{module}}/config.rs
+use super::config_new;
 
 pub struct Config {
     pub timeout_secs: u64,
 }
 
 impl Default for Config {
-    fn default() -> Self { ... }
+    fn default() -> Self { Self { timeout_secs: 30 } }
 }
 
 #[rustfmt::skip]
 impl Config {
-    pub fn new() -> Self { config_method::new() }
-    pub fn coop() -> Self { config_method::coop() }
-    pub fn with_timeout(self, ms: u64) -> Self { config_method::with_timeout(self, ms) }
+    pub fn new() -> Self { config_new::new() }
+    pub fn coop() -> Self { config_new::coop() }
 }
 ```
 
-> **Delegation call rule:** When a function in `methods/{{module}}/{{type}}/` delegates to another method of the same struct, it MUST call it through the struct's public API (e.g., `Config::coop()`), NOT directly by name. The struct method in `structs/{{module}}/{{type}}.rs` is the authoritative API surface. Example chain: `Config::lan_coop()` → delegate in `config.rs` → `config_method::lan_coop()` → calls `Config::coop()` → delegate in `config.rs` → `config_method::coop()`.
+### Method File (`{{module}}/{{type}}_{{function}}.rs`)
+
+Contains a single free function matching the method name exactly. The module is **PRIVATE** — declared with `mod` (not `pub mod`) in `mod.rs`. Method files are never imported directly; they are consumed exclusively through the struct's thin delegates.
+
+The filename follows the pattern `<struct_name>_<method>.rs` so that method files of the same struct sort together alphabetically in the flat domain folder.
+
+```rust
+// {{module}}/config_new.rs
+use super::config::Config;
+
+pub fn new() -> Config { Config::default() }
+
+#[cfg(test)]
+mod tests {
+    use super::new;
+    use crate::{{module}}::Config;
+
+    #[test]
+    fn test_usage() {
+        let config = new();
+        assert!(config.timeout_secs > 0);
+    }
+}
+```
+
+**Thin delegate dispatch from struct file:**
+
+```rust
+// {{module}}/config.rs
+use super::config_new;
+
+#[rustfmt::skip]
+impl Config {
+    pub fn new() -> Self { config_new::new() }    // 2 segments
+}
+```
+
+Both files are siblings in `{{module}}/`. The struct file imports the method module with `use super::config_new;` and calls it as `config_new::new()`. No deep crate paths.
+
+### Method Files Are Private
+
+Method modules are declared with `mod` (private) in the domain `mod.rs`. They are NOT re-exported. Only the struct type and system functions are public:
+
+```rust
+// {{module}}/mod.rs
+mod config;                     // struct module — private
+mod config_new;                 // method module — PRIVATE
+mod config_coop;                // method module — PRIVATE
+pub mod increment;              // system function — PUBLIC
+
+pub use config::Config;         // type is public
+pub use increment::increment;   // system is public
+```
+
+External consumers can only call `config.new()` through the struct's public thin delegate. `crate::{{module}}::config_new::new()` is a private module and will not compile.
+
+### Grouping (User-Directed)
+
+The base structure is flat. Method files and struct files are siblings in one folder. When a domain grows, the user may introduce subfolders. Method files inside subfolders keep the same `<struct>_<method>.rs` naming:
+
+```
+{{module}}/
+  mod.rs
+  plugin/
+    mod.rs
+    plugin.rs
+    plugin_build.rs
+  state/
+    mod.rs
+    state.rs
+    state_new.rs
+    state_increment.rs
+  command.rs                     # stays flat
+  event.rs                       # stays flat
+  increment.rs                   # stays flat
+```
+
+No automated threshold triggers grouping — the user decides. The only rules are:
+- Method filenames always use `<struct>_<method>.rs`, even inside subfolders
+- Subfolder items are NOT re-exported at the domain root; consumers access them through the subfolder path
+- `mod.rs` in every directory follows Rule 6 (module tree only)
+
+```rust
+// {{module}}/plugin/mod.rs
+mod plugin;                     // struct — private, but pub use below
+mod plugin_build;               // method — PRIVATE
+
+pub use plugin::ClickerPlugin;  // type is public
+```
+
+Consumer path: `use crate::{{module}}::plugin::ClickerPlugin;`
+
+> **Delegation call rule:** When a method file calls another method of the same struct, it MUST route through the struct's public API (e.g., `Config::coop()`), not call the other method file directly. The struct's thin delegates are the authoritative API surface. Example chain: `Config::lan_coop()` → thin delegate → `config_lan_coop::lan_coop()` → calls `Config::coop()` → thin delegate → `config_coop::coop()`.
 
 ### Named Defaults
 
-A "named default" is a preset constructor (e.g., `Config::coop()`, `Config::pvp()`). It follows the same decomposition rule — goes in `methods/{{module}}/{{type}}/` as a free function.
+A "named default" is a preset constructor (e.g., `Config::coop()`, `Config::pvp()`). It follows the same decomposition rule — goes in a method file `{{type}}_{{name}}.rs`.
 
 A method qualifies as a named default when ALL hold:
 1. Returns `{{Type}}`, takes no `self` receiver
@@ -128,7 +195,7 @@ Examples: `Config::coop()`, `Config::pvp()`
 Counterexamples: `Config::new()` — generic constructor; `Config::with_auto_accept(mut self, ...)` — builder, takes self
 
 **Benefits of this decomposition:**
-- `structs/{{module}}/{{type}}.rs` shows every public method signature at a glance.
+- `{{module}}/{{type}}.rs` shows every public method signature at a glance.
 - Individual files can be `#[cfg(feature = "...")]`-gated.
 - Each file carries its own self-contained test.
 - The struct definition remains a minimal, readable declaration.
@@ -141,22 +208,16 @@ Counterexamples: `Config::new()` — generic constructor; `Config::with_auto_acc
 
 #### Associated Constants (belonging to a struct type)
 
-A constant meaningful only in the context of a **single** struct type MUST be an associated constant inside `structs/{{module}}/{{type}}.rs`:
+A constant meaningful only in the context of a **single** struct type MUST be an associated constant inside `{{module}}/{{type}}.rs`:
 
 ```rust
-// structs/{{module}}/{{type}}.rs
+// {{module}}/{{type}}.rs
 pub struct {{Type}} { pub inner: libp2p::gossipsub::IdentTopic }
 
 impl {{Type}} {
     pub const GAME_TOPIC_STR: &str = "{{crate}}_p2p_game";
 }
 ```
-
-**Layout in `structs/{{module}}/{{type}}.rs` (in order):**
-1. `struct` definition
-2. `impl TypeName { pub const ... }` — associated constants, real bodies
-3. `impl Default` — real body
-4. All other `impl` blocks — thin delegates
 
 **Criterion — associated vs. module-level:** An associated constant if **all** hold:
 1. Its value is only meaningful for one specific struct type.
@@ -206,6 +267,13 @@ A qualifier is **redundant (echo)** when it repeats the same lexical root as the
 - `p2p::P2pPlugin` → echo. Use `p2p::Plugin`.
 - `auth::AuthError` → echo. Use `auth::Error`.
 
+### How It Applies to Files
+
+Filenames follow the same rule.
+
+- `auth/auth_error.rs` → `auth/error.rs` ✓
+- `inventory/inventory_item.rs` → `inventory/item.rs` ✓
+
 ### Common Misconceptions
 
 1. **"`inventory::Item` is too vague!"** — It isn't. `use inventory::Item;` reads as "an inventory Item."
@@ -215,59 +283,70 @@ A qualifier is **redundant (echo)** when it repeats the same lexical root as the
 ## 5. Module Exporting & Flattening (CRITICAL)
 
 ### A. Exporting (Inside `mod.rs`)
-Flatten single-function and single-struct files in their parent `mod.rs` using `pub use` to prevent stutter.
 
-**Struct files** in `structs/{{module}}/`:
+Flatten single-function and single-struct files in their parent `mod.rs` using `pub use` to prevent stutter. Method files are NEVER re-exported — they are private modules.
+
+**Struct types** (public):
+
 ```rust
-// structs/{{module}}/mod.rs
+// {{module}}/mod.rs
 pub mod {{type}};
-pub use {{type}}::{{Type}};     // Flatten: structs::{{module}}::{{Type}} not structs::{{module}}::{{type}}::{{Type}}
+pub use {{type}}::{{Type}};     // Flatten: {{module}}::{{Type}} not {{module}}::{{type}}::{{Type}}
 ```
 
-**Function files** in `system/{{module}}/`:
+**System functions / free functions** (public):
+
 ```rust
-// system/{{module}}/mod.rs
+// {{module}}/mod.rs
 pub mod {{function}};
 pub use {{function}}::{{function}};
 ```
 
-**Method directories** in `methods/{{module}}/` are NOT re-exported at the module root. Methods are accessed exclusively through the struct's thin delegates.
+**Method files** (PRIVATE):
 
-**Exception — items in subdirectories under `methods/` (per-type dirs):**
 ```rust
-// methods/{{module}}/config/mod.rs
-pub mod new;
-pub mod coop;
-
-pub use new::new;     // flatten: config::new() not config::new::new()
-pub use coop::coop;
+// {{module}}/mod.rs
+mod {{type}}_{{function}};      // private — no pub, no pub use
 ```
 
-**Subdirectory items that are not in flat files (e.g., domain submodules) are NOT re-exported:**
+**User-chosen subfolders:**
+
 ```rust
-// ✓ Subdirectory declared — its contents are NOT re-exported
-pub mod {{submodule}};   // consumers: {{module}}::{{submodule}}::{{Type}}
+// {{module}}/mod.rs
+pub mod {{subfolder}};          // declared — items inside NOT re-exported
 ```
 
-> **Exception — `constants.rs` glob re-export:** `pub use constants::*;` is safe because constants live in the value namespace. Do not extend to types or functions.
+Items inside subfolders are accessed through their folder path (e.g., `{{module}}::plugin::ClickerPlugin`). Do NOT re-export them at the domain root.
+
+**`constants.rs`:**
+
+```rust
+// {{module}}/mod.rs
+pub mod constants;
+pub use constants::*;           // constants live in the value namespace — safe glob
+```
 
 ### B. Importing (Inside Consumer Files)
 
 | What you're importing | Style | Example |
 |---|---|---|
-| **Types from `structs/`** | Import exact item | `use crate::structs::{{module}}::{{Type}};` |
-| **Functions from `system/`** | Import parent module, call through it | `use crate::system::{{module}};` → `{{module}}::{{function}}()` |
-| **Types from a domain submodule** | Import through full path | `use crate::{{module}}::{{submodule}}::{{Type}};` |
+| **Structs / pure enums** | Import exact item | `use crate::{{module}}::{{Type}};` |
+| **System functions** | Import parent domain, call through it | `use crate::{{module}};` → `{{module}}::{{function}}()` |
+| **Items in user subfolder** | Import through full module path | `use crate::{{module}}::{{subfolder}}::{{Type}};` |
+| **External crate types** | Import directly | `use extern_crate::Type;` |
 
 ```rust
-// ✓ Correct — types via structs/ tree
-use crate::structs::{{module}}::{{Type}};
+// ✓ Correct — types via direct import
+use crate::{{module}}::{{Type}};
 
-// ✓ Correct — system functions via module prefix
-use crate::system::{{module}};
+// ✓ Correct — system functions via domain prefix
+use crate::{{module}};
 
-// ✗ Wrong — super:: breaks on directory moves
-use super::{{Type}};
+// ✓ Correct — subfolder items via full path
+use crate::{{module}}::{{subfolder}}::{{Type}};
+
+// ✗ Wrong — importing a PRIVATE method module
+use crate::{{module}}::{{type}}_{{function}};
 ```
 
 Methods are never imported directly — they are called through the struct's thin delegates.
@@ -278,6 +357,7 @@ A `mod.rs` file builds the module tree and flattens exports. It must NOT contain
 
 **Rule:** A `mod.rs` may contain ONLY:
 - `pub mod` declarations
+- `mod` declarations (for private method files)
 - `pub use` re-exports
 
 Everything else is **strictly forbidden**:
@@ -289,12 +369,14 @@ Everything else is **strictly forbidden**:
 - ❌ Trait definitions
 
 ✅ **Allowed — pure re-export:**
+
 ```rust
-// structs/p2p/mod.rs
+// {{module}}/mod.rs
 pub mod config;
 pub use config::Config;
 
-// No pub use from methods/ — methods are accessed through Config.rs thin delegates
+mod config_new;            // method file — PRIVATE
+mod config_coop;           // method file — PRIVATE
 ```
 
 ## 7. Error Handling (Strict Constraints)
@@ -323,7 +405,7 @@ Every file whose primary item is a non-trivial function (branching, arithmetic, 
 
 **Exemption — type-only definitions:** Pure struct/enum with zero `impl` blocks → no `test_usage` required.
 
-**Struct files with hand-written impl blocks — test_usage required:** A `structs/{{module}}/{{type}}.rs` with any hand-written `impl` block (beyond `impl Default` alone) MUST contain a `test_usage` test that:
+**Struct files with hand-written impl blocks — test_usage required:** A `{{module}}/{{type}}.rs` with any hand-written `impl` block (beyond `impl Default` alone) MUST contain a `test_usage` test that:
 1. Constructs the struct.
 2. Exercises it through the primary integration path.
 3. Asserts on an observable outcome.
@@ -337,31 +419,36 @@ Every file whose primary item is a non-trivial function (branching, arithmetic, 
 **Context-dependent items (e.g., framework systems):** Construct a minimal working context inside the test. See framework-specific skills for patterns.
 
 ```rust
-// methods/{{module}}/{{type}}/new.rs
-use crate::structs::{{module}}::{{Type}};
+// {{module}}/{{type}}_{{function}}.rs
+use super::{{type}}::{{Type}};
 
-pub fn new() -> {{Type}} { {{Type}}::default() }
+pub fn {{function}}() -> {{Type}} { {{Type}}::default() }
 
 #[cfg(test)]
 mod tests {
-    use super::new;
+    use super::{{function}};
+    use crate::{{module}}::{{Type}};
 
     #[test]
     fn test_usage() {
-        let result = new();
+        let result = {{function}}();
         assert!(result.timeout_secs > 0);
     }
 }
 ```
 
 **Plugin test example:**
+
 ```rust
-// structs/{{module}}/plugin.rs
+// {{module}}/plugin.rs
+use super::plugin_build;
+use bevy::prelude::*;
+
 pub struct Plugin;
 
 #[rustfmt::skip]
 impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) { crate::methods::{{module}}::plugin::build(self, app) }
+    fn build(&self, app: &mut App) { plugin_build::build(self, app) }
 }
 
 #[cfg(test)]
@@ -377,7 +464,7 @@ mod tests {
 }
 ```
 
-**Imports in tests:** Follow Rule 11. `super::` is allowed for same-file items.
+**Imports in tests:** Follow Rule 11. `super::` is allowed for same-file items. Cross-domain types use `crate::`.
 
 ## 9. Universal Code Style
 
@@ -401,41 +488,71 @@ cargo fmt -- --check
 cargo test --all-targets
 ```
 
-## 11. Import Style — Absolute `crate::` Only (Strict)
+## 11. Import Style
 
-Every `use` statement MUST start with `crate::` or an extern crate name. Relative paths (`super::`, `self::`) are banned in production code.
+Production code imports follow two rules:
+1. **Same-domain imports:** Use `super::` for files sharing the same domain folder. All files in a domain folder move together, so `super::` paths survive refactoring safely.
+2. **Cross-domain imports:** Use `crate::` for anything outside the current domain folder.
 
 ### Import by type
 
 | What you're importing | Style | Example |
 |---|---|---|
-| **Types from `structs/`** | Import exact item | `use crate::structs::{{module}}::{{Type}};` |
-| **Types from a domain submodule** | Import through full path | `use crate::{{module}}::{{submodule}}::{{Type}};` |
-| **Functions from `system/`** | Import parent module, call through it | `use crate::system::{{module}};` → `{{module}}::{{function}}()` |
-| **External crate types** | Import directly | `use extern_crate::Type;` |
+| **Struct/enum in same domain** | `super::` path | `use super::config::Config;` |
+| **Struct/enum in other domain** | `crate::` path | `use crate::clicker::Config;` |
+| **System fn in same domain** | `super::` path | `use super::increment;` |
+| **System fn in other domain** | Module prefix | `use crate::clicker;` → `clicker::increment()` |
+| **External crate types** | Import directly | `use bevy::prelude::*;` |
 
 ```rust
-// ✓ Correct — types via structs/ tree
-use crate::structs::{{module}}::{{Type}};
+// ✓ Same-domain: struct from domain, method sibling
+// In {{module}}/{{type}}_{{function}}.rs:
+use super::{{type}}::{{Type}};
 
-// ✓ Correct — system functions via module prefix
-use crate::system::{{module}};
+// ✓ Same-domain: struct file calling method
+// In {{module}}/{{type}}.rs:
+use super::{{type}}_{{function}};
 
-// ✗ Wrong — super:: breaks on directory moves
-use super::{{Type}};
+// ✓ Cross-domain: consuming a type from another domain
+use crate::combat::Damage;
+
+// ✓ Cross-domain: calling a system from another domain
+use crate::combat;
+combat::apply_damage();
 ```
+
+```rust
+// ✗ Wrong — crate:: for same-domain siblings (unnecessarily verbose)
+use crate::{{module}}::{{type}}::{{Type}};  // use super::{{type}}::{{Type}} instead
+
+// ✗ Wrong — super:: crossing domain boundaries
+use super::clicker::Config;  // use crate::clicker::Config instead
+```
+
+### Imports in thin delegates
+
+Thin delegates in the struct file use `use super::{{type}}_{{function}};` to import sibling method modules:
+
+```rust
+// {{module}}/{{type}}.rs
+use super::{{type}}_{{function}};
+
+#[rustfmt::skip]
+impl {{Type}} {
+    pub fn {{function}}() -> Self { {{type}}_{{function}}::{{function}}() }
+}
+```
+
+The dispatch call is always `module_name::function_name(self, ...)` — 2 segments.
 
 ### Test modules — `super::` allowed for same-file access
 
 ```rust
-// ✓ Correct — super:: for same-file items, crate:: for external items
+// ✓ Correct — super:: for same-file items, crate:: for external
 #[cfg(test)]
 mod tests {
-    use super::{{function}};
-    use crate::structs::{{module}}::{{Type}};
-
-    #[test]
-    fn test_usage() { ... }
+    use super::{{function}};            // same-file item
+    use crate::{{module}}::{{Type}};    // cross-domain type
 }
 ```
 
