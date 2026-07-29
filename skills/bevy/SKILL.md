@@ -13,38 +13,36 @@ Bevy engine patterns for Rust projects that depend on `bevy`. This skill may ove
 
 ### Plugin Struct + Delegate Separation
 
-Separate the Plugin struct definition from its `impl Plugin for ...` trait implementation. The trait impl in `StructName.rs` is a thin delegate calling a free function in `{{Type}}Method/` per the atomic file structure rule:
+Separate the Plugin struct definition from its `impl Plugin for ...` trait implementation. The trait impl in `structs/{{module}}/plugin.rs` is a thin delegate calling a free function in `methods/{{module}}/plugin/` per the atomic file structure rule:
 
 ```
-Plugin.rs                # struct Plugin { ... } — definition only
-                            # + impl Plugin for Plugin { fn build(...) {
-                            #     PluginMethod::build(self, app) } }
-PluginMethod/
-  mod.rs                    # pub mod declarations + pub use flattening
-  build.rs                  # pub fn build(plugin: &Plugin, app: &mut App)
+structs/{{module}}/
+  plugin.rs                    # struct Plugin { ... }
+                               # + #[rustfmt::skip] impl Plugin for Plugin { fn build(...) {
+                               #     crate::methods::{{module}}::plugin::build(self, app) } }
+methods/{{module}}/
+  plugin/
+    mod.rs                     # pub mod declarations + pub use flattening
+    build.rs                   # pub fn build(plugin: &Plugin, app: &mut App)
 ```
 
-- The function file inside `{{Type}}Method/` follows snake_case naming — e.g., `build.rs` for `fn build()`.
-- The thin delegate `impl Plugin for ...` block in `StructName.rs` MUST be annotated with `#[rustfmt::skip]` and kept as single-line methods (per the thin delegate convention).
+- The function file inside `methods/{{module}}/plugin/` follows snake_case naming — e.g., `build.rs` for `fn build()`.
+- The thin delegate `impl Plugin for ...` block in `plugin.rs` MUST be annotated with `#[rustfmt::skip]`.
 
-### Component Files
+### Component, Resource, and Event Types
 
-`#[derive(Component)]` structs go in the `component/` subdirectory. Each in its own atomic file:
+All Bevy type-defining structs and enums live as peers in `structs/{{module}}/` — no `component/` or `resource/` subdirectories. The `#[derive(...)]` macro is sufficient to convey the type's role.
 
 ```rust
-// component/ClickCounter.rs
+// structs/{{module}}/click_counter.rs
 use bevy::prelude::Component;
 
 #[derive(Component)]
 pub struct ClickCounter { pub count: u32 }
 ```
 
-### Resource Files
-
-`#[derive(Resource)]` structs go in the `resource/` subdirectory. Each in its own atomic file:
-
 ```rust
-// resource/NetworkState.rs
+// structs/{{module}}/network_state.rs
 use bevy::prelude::Resource;
 
 #[derive(Resource)]
@@ -53,14 +51,8 @@ pub struct NetworkState {
 }
 ```
 
-**Bevy 0.19 constraint — Resources are Components:** `Resource` is now a subtrait of `Component`; `#[derive(Resource)]` implements both. A type can no longer derive both `#[derive(Component)]` and `#[derive(Resource)]` — split shared data into distinct resource and component types. (The separate-type examples above already follow this required pattern.)
-
-### Event Types
-
-Use `#[derive(Message)]` for event enums:
-
 ```rust
-// Event.rs
+// structs/{{module}}/event.rs
 use bevy::prelude::Message;
 
 #[derive(Message, Debug, Clone)]
@@ -72,44 +64,51 @@ pub enum Event {
 }
 ```
 
+**Bevy 0.19 constraint — Resources are Components:** `Resource` is now a subtrait of `Component`; `#[derive(Resource)]` implements both. A type can no longer derive both `#[derive(Component)]` and `#[derive(Resource)]` — split shared data into distinct resource and component types.
+
 Events are consumed via `MessageWriter<T>` / `MessageReader<T>` (the newer Bevy API replacing `EventWriter`/`EventReader`).
 
 ## 2. Bevy System Conventions
 
-Systems are plain functions. File naming follows the function name (snake_case).
+Systems are plain functions living in `system/{{module}}/`. File naming follows the function name (snake_case).
 
 ### System Parameters
 
 Use `Res<T>` / `ResMut<T>` for resources, `Query<&T, &mut T>` for components, `Commands` for spawning, `MessageWriter<T>` / `MessageReader<T>` for events:
 
 ```rust
-// poll_network.rs
+// system/{{module}}/poll_network.rs
+use bevy::prelude::*;
+use crate::structs::{{module}}::{Session, RemoteInputBuffer, NetworkState, PeerState, Event};
+
 pub fn poll_network(
     mut session: ResMut<Session>,
     mut input_buffer: ResMut<RemoteInputBuffer>,
     mut network_state: ResMut<NetworkState>,
     mut peer_state: ResMut<PeerState>,
-    mut events: MessageWriter<p2p::Event>,
+    mut events: MessageWriter<Event>,
 ) { ... }
 ```
 
-The `p2p::Event` type in the system signature refers to the `Event` enum defined in Section 1 (in `Event.rs` using `#[derive(Message)]`).
-
 ### System Registration
 
-Register systems with `app.add_systems()`:
+Register systems with `app.add_systems()` inside the Plugin's `build` method:
 
 ```rust
-// PluginMethod/build.rs
-pub fn build(plugin: &Plugin, app: &mut App) {
+// methods/{{module}}/plugin/build.rs
+use bevy::prelude::*;
+use crate::structs::{{module}}::{Plugin, Tick, NetworkState, Session};
+use crate::system::{{module}};
+
+pub fn build(_plugin: &Plugin, app: &mut App) {
     app.init_resource::<Tick>()
        .init_resource::<NetworkState>()
        .insert_resource(Session::new(...))
        .add_systems(FixedUpdate, (
-           poll_network,
-           log_peer_count,
-           broadcast,
-           apply_remote_inputs,
+           {{module}}::poll_network,
+           {{module}}::log_peer_count,
+           {{module}}::broadcast,
+           {{module}}::apply_remote_inputs,
        ));
 }
 ```
@@ -121,7 +120,10 @@ Use `FixedUpdate` for fixed-timestep game logic, `Update` for per-frame UI/input
 When a system requires a Bevy `App` context, construct a minimal working `App` inside the test:
 
 ```rust
-// detect_click.rs
+// system/{{module}}/detect_click.rs
+use bevy::prelude::*;
+use crate::structs::{{module}}::{Owner, ClickCounter};
+
 pub fn detect_click(
     mut query: Query<(&Owner, &mut ClickCounter, &GlobalTransform)>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
@@ -171,23 +173,18 @@ mod tests {
 ### Testing Resource Initialization
 
 ```rust
-// For systems that need `Res<T>` or `ResMut<T>`:
 let mut app = App::new();
 app.insert_resource(MyResource { ... });
-app.insert_resource(OtherResource::default());
 app.add_systems(Update, my_system);
 app.update();
 ```
 
 ### Testing Events (Message)
 
-For systems that read events via `MessageReader<T>`, emit events manually before `app.update()`:
-
 ```rust
 let mut app = App::new();
 app.add_message::<MyEvent>();
 app.add_systems(Update, handle_event);
-// Manually write an event (simulates what a sending system would do):
 app.world_mut()
     .resource_mut::<Messages<MyEvent>>()
     .write(MyEvent::Variant(value));
@@ -196,20 +193,16 @@ app.update();
 
 ## 4. Bevy Plugin Composition
 
-When composing multiple plugins, add them as a tuple. Order matters — `p2p::Plugin` must come before `sync::Plugin` since sync depends on networking resources:
+When composing multiple plugins, add them as a tuple:
 
 ```rust
 // main.rs or plugin builder
-app.add_plugins((
-    p2p::Plugin::new(config),  // networking: swarm, connections
-    sync::Plugin,               // sync: tick, input buffer, broadcast
-));
+use crate::structs::p2p::Plugin as P2pPlugin;
+use crate::structs::sync::Plugin as SyncPlugin;
 
-// Game-mode plugins are added independently:
 app.add_plugins((
-    p2p::Plugin::new(config),
-    sync::Plugin,
-    boxes::GamePlugin,          // or clicker::GamePlugin, etc.
+    P2pPlugin::new(config),
+    SyncPlugin,
 ));
 ```
 
@@ -224,71 +217,100 @@ app.add_plugins((
 
 ## 6. Internal Subfolder Convention
 
-Every top-level module MUST follow the project-conventions atomic file structure. `{{Type}}Method/` directories live alongside their type file — if the type is at the module root, `{{Type}}Method/` is at the module root; if the type is in `component/` or `resource/`, `{{Type}}Method/` is inside that subdirectory alongside the type file. Only create `component/` or `resource/` subdirectories when they contain at least one type (empty directories clutter the tree). If a module has no component or resource types, do not declare the submodule in `mod.rs`.
+Every crate MUST follow the three-tree layout. Types live in `structs/`, method implementations in `methods/`, and systems in `system/`. Each tree mirrors the domain module hierarchy — create a module entry only when it has content (sparse trees).
 
 ```
-// Example: p2p module layout
-p2p/
-  mod.rs
-  Config.rs              # struct + Default + thin delegate impl blocks
-  ConfigMethod/          # method free functions (new, coop, with_*, etc.)
-  Event.rs               # plain event enum
-  component/
-    mod.rs
-    (Component types only)
-  resource/
-    mod.rs
-    PeerState.rs         # #[derive(Resource)] + thin delegate impl blocks
-    PeerStateMethod/     # accept_peer, add_connected_peer, ...
-  system/
-    mod.rs
-    poll_network.rs          # Bevy system
-    log_peer_count.rs        # Bevy system
+src/
+  lib.rs                         # pub mod structs; pub mod methods; pub mod system;
+  structs/                       # all type definitions
+    {{module}}/
+      mod.rs
+      plugin.rs                  # struct Plugin + thin delegates
+      config.rs                  # struct Config + Default + thin delegates
+      event.rs                   # #[derive(Message)] enum Event
+      peer_state.rs              # #[derive(Resource)] struct PeerState + thin delegates
+      click_counter.rs           # #[derive(Component)] struct ClickCounter
+      ...
+  methods/                       # method free functions (per-struct directories)
+    {{module}}/
+      mod.rs
+      plugin/
+        mod.rs
+        build.rs                 # pub fn build(plugin: &Plugin, app: &mut App)
+      config/
+        mod.rs
+        new.rs
+        coop.rs
+      peer_state/
+        mod.rs
+        accept_peer.rs
+        add_connected_peer.rs
+      ...
+  system/                        # Bevy systems and module-level free functions
+    {{module}}/
+      mod.rs
+      poll_network.rs
+      broadcast.rs
+      detect_click.rs
+      ...
 ```
-Note — items in `component/`, `resource/`, and `system/` are NOT re-exported at the module root. Consumers import them through their full submodule path (e.g., `use crate::{{module}}::resource::{{Type}};`). This follows the general rule — the `{{submodule}}` template variable maps to one of these concrete names (`component`, `resource`, `system`, or a `{{Type}}Method/` directory).
+
+Items in `system/{{module}}/` are NOT re-exported at the module root. Consumers import them through the `system` submodule:
+```rust
+use crate::system::{{module}};
+{{module}}::poll_network(...);
+```
+
+Methods in `methods/{{module}}/{{type}}/` are never imported directly — they are called exclusively through the struct's thin delegates in `structs/{{module}}/{{type}}.rs`.
 
 ## 7. System Placement
 
 ### Definition
-A **system function** is any function registered with `app.add_systems()` (or any other schedule) inside a `{{Type}}Method/build.rs` file.
+A **system function** is any function registered with `app.add_systems()` inside a `methods/{{module}}/plugin/build.rs` file.
 
 ### Placement Rules
 
 | Function type | Location | Example |
 |---|---|---|
-| Registered in `add_systems()` | `{module}/system/` | `p2p/system/poll_network.rs` |
-| Plain helper (no SystemParams) | Module root, or inline in the calling system file as a private helper | `p2p/handle_incoming_message.rs` |
-| Internal builder/spawn helper used only by one system | Same file as the calling system (private helper function) | `spawn_remote_player` inside `handle_player_join.rs` |
+| Registered in `add_systems()` | `system/{{module}}/` | `poll_network.rs` |
+| Plain helper (no SystemParams) | Inline in the calling system file, or as a level file in `system/{{module}}/` | `handle_incoming_message.rs` |
+| Internal builder/spawn helper used only by one system | Same file as the calling system (private helper) | `spawn_remote_player` inside `handle_player_join.rs` |
 
-A function that takes a Bevy type as a plain reference (e.g., `&ButtonInput<KeyCode>`) is NOT a system — it is a helper and follows the same rule as any other plain function.
+A function that takes a Bevy type as a plain reference (e.g., `&ButtonInput<KeyCode>`) is NOT a system — it is a helper.
 
-Consumers call system functions through the `system` submodule:
+### Consumer Imports
+
+Systems registered in `system/{{module}}/` must be imported through the `system` submodule:
+```rust
+// methods/{{module}}/plugin/build.rs
+use crate::system::{{module}};
+
+{{module}}::poll_network
 ```
-use crate::{{module}}::system;
-system::{{function}}(...);
+
+Plain helpers in `system/{{module}}/` are imported directly:
+```rust
+use crate::system::{{module}}::handle_incoming_message;
 ```
 
 ## 8. Command Pattern: Core Logic + Wrapper Systems
 
-When implementing actions that can be triggered from multiple sources (GUI clicks, CLI commands, keyboard input, network messages), separate the **core logic** from the **input handling**.
-
-### Structure
+Separate **core logic** (pure functions) from **input handling** (Bevy systems) when an action can be triggered from multiple sources.
 
 ```
-module/
-  system/
-    increment.rs              # Core logic (pure function)
-    increment_button.rs       # GUI wrapper (calls increment)
-    increment_cli.rs          # CLI wrapper (calls increment)
+system/{{module}}/
+  increment.rs              # Core logic (pure function)
+  increment_button.rs       # GUI wrapper (calls increment)
+  increment_cli.rs          # CLI wrapper (calls increment)
 ```
 
 ### Core Logic Function
 
-The core logic is a **pure function** with no Bevy system parameters (or minimal ones like `&mut State`). Named after the action itself:
+Pure function with no Bevy system parameters. Named after the action:
 
 ```rust
-// system/increment.rs
-use crate::clicker::resource::State::ClickerState;
+// system/{{module}}/increment.rs
+use crate::structs::{{module}}::ClickerState;
 
 pub fn increment(state: &mut ClickerState, amount: u64) {
     state.count = state.count.wrapping_add(amount);
@@ -304,14 +326,14 @@ pub fn increment(state: &mut ClickerState, amount: u64) {
 
 ### Wrapper Systems
 
-Wrapper systems are **thin Bevy systems** that extract input and call the core logic. Named with a suffix indicating the trigger source:
+Thin Bevy systems that extract input and call the core logic. Named with a suffix indicating the trigger source:
 
 ```rust
-// system/increment_button.rs
+// system/{{module}}/increment_button.rs
 use bevy::prelude::*;
-use crate::clicker::gui::component::IncrementButton;
-use crate::clicker::resource::State::ClickerState;
-use super::increment::increment;
+use crate::structs::{{module}}::IncrementButton;
+use crate::structs::{{module}}::ClickerState;
+use super::increment;
 
 pub fn increment_button(
     interaction: Query<&Interaction, (Changed<Interaction>, With<IncrementButton>)>,
@@ -325,47 +347,24 @@ pub fn increment_button(
 }
 ```
 
-```rust
-// system/increment_cli.rs
-use bevy::prelude::*;
-use crate::clicker::resource::State::ClickerState;
-use super::increment::increment;
-
-pub fn increment_cli(
-    mut cmd: ConsoleCommand<IncrementArgs>,
-    mut state: ResMut<ClickerState>,
-) {
-    if let Some(Ok(IncrementArgs { amount })) = cmd.take() {
-        increment(&mut state, amount);
-    }
-}
-```
-
 ### Naming Convention
 
 | Function | Location | Naming |
 |----------|----------|--------|
-| Core logic | `system/{action}.rs` | `{action}` (e.g., `increment`) |
-| GUI wrapper | `system/{action}_button.rs` | `{action}_button` |
-| CLI wrapper | `system/{action}_cli.rs` | `{action}_cli` |
-| Keyboard wrapper | `system/{action}_key.rs` | `{action}_key` |
-| Network wrapper | `system/{action}_network.rs` | `{action}_network` |
-
-### Benefits
-
-1. **Single source of truth**: Core logic lives in one place
-2. **Easy testing**: Test the pure function directly, no Bevy `App` needed
-3. **Multiple input sources**: GUI, CLI, keyboard, network all call the same logic
-4. **Clear separation**: Input handling (Bevy systems) vs business logic (pure functions)
+| Core logic | `system/{module}/{action}.rs` | `{action}` (e.g., `increment`) |
+| GUI wrapper | `system/{module}/{action}_button.rs` | `{action}_button` |
+| CLI wrapper | `system/{module}/{action}_cli.rs` | `{action}_cli` |
+| Keyboard wrapper | `system/{module}/{action}_key.rs` | `{action}_key` |
+| Network wrapper | `system/{module}/{action}_network.rs` | `{action}_network` |
 
 ### When to Use
 
-Use this pattern when:
+Use when:
 - An action can be triggered from multiple sources
 - You want to test the logic without Bevy
 - The logic is complex enough to warrant isolation
 
-Skip this pattern when:
+Skip when:
 - The action is trivial (e.g., just incrementing a counter by 1)
 - There's only one input source
 - The logic is tightly coupled to Bevy types (e.g., spawning entities)
