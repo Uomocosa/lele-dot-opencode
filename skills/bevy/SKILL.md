@@ -225,7 +225,7 @@ app.add_plugins((
 
 ## 6. Internal Domain Layout
 
-Every domain lives in a single folder under `src/`. Structs, methods, systems, and types are all co-located. No `structs/`/`methods/`/`system/` split.
+Every domain lives in a single folder under `src/`. Structs, methods, systems, and types are all co-located. **System functions live in a `systems/` subfolder** to avoid filename collisions with Component types. No `structs/`/`methods/`/`system/` split.
 
 ```
 src/
@@ -241,15 +241,17 @@ src/
     peer_state_accept_peer.rs    # method  (PRIVATE)
     click_counter.rs             # #[derive(Component)] struct ClickCounter
     event.rs                     # #[derive(Message)] enum Event
-    poll_network.rs              # system function  (PUBLIC)
-    broadcast.rs                 # system function  (PUBLIC)
-    detect_click.rs              # system function  (PUBLIC)
+    systems/
+      mod.rs
+      poll_network.rs            # system function  (PUBLIC)
+      broadcast.rs               # system function  (PUBLIC)
+      detect_click.rs            # system function  (PUBLIC)
 ```
 
 **Visibility rules:**
 - Struct types → `pub mod <name>;` + `pub use <name>::<Type>;` in mod.rs (public)
 - Method files → `mod <struct>_<method>;` in mod.rs (PRIVATE)
-- System functions → `pub mod <name>;` + `pub use <name>::<name>;` in mod.rs (public)
+- System functions → `pub mod systems;` in mod.rs; re-export individual systems via `pub use systems::<name>::<name>;` in mod.rs (public)
 - Pure enums → `pub mod <name>;` + `pub use <name>::<Type>;` in mod.rs (public)
 
 **mod.rs example:**
@@ -263,25 +265,24 @@ mod peer_state;
 mod peer_state_accept_peer;
 mod click_counter;
 mod event;
-pub mod poll_network;
-pub mod broadcast;
-pub mod detect_click;
+pub mod systems;
 
 pub use click_counter::ClickCounter;
 pub use config::Config;
 pub use event::Event;
 pub use peer_state::PeerState;
 pub use plugin::Plugin;
-pub use poll_network::poll_network;
-pub use broadcast::broadcast;
-pub use detect_click::detect_click;
+pub use systems::poll_network::poll_network;
+pub use systems::broadcast::broadcast;
+pub use systems::detect_click::detect_click;
 ```
 
 **Consumer imports:**
 ```rust
+// Types and re-exported systems — direct import
 use crate::{{module}}::Plugin;
 use crate::{{module}};
-{{module}}::poll_network(...);
+{{module}}::poll_network(...);  // re-exported from systems/
 ```
 
 Method files are never imported directly — they are called exclusively through the struct's thin delegates.
@@ -295,7 +296,7 @@ A **system function** is any function registered with `app.add_systems()` inside
 
 | Function type | Location | Example |
 |---|---|---|
-| Registered in `add_systems()` | `{{module}}/` | `poll_network.rs` |
+| Registered in `add_systems()` | `{{module}}/systems/` | `systems/poll_network.rs` |
 | Plain helper (no SystemParams) | Inline in the calling system file, or as a level file in `{{module}}/` | `handle_incoming_message.rs` |
 | Internal builder/spawn helper used only by one system | Same file as the calling system (private helper) | `spawn_remote_player` inside `handle_player_join.rs` |
 
@@ -303,12 +304,12 @@ A function that takes a Bevy type as a plain reference (e.g., `&ButtonInput<KeyC
 
 ### Consumer Imports
 
-Systems registered in `{{module}}/` must be imported through the domain module:
+Systems registered in `{{module}}/systems/` must be imported through the domain module:
 ```rust
 // {{module}}/plugin_build.rs
 use crate::{{module}};
 
-{{module}}::poll_network
+{{module}}::systems::poll_network::poll_network
 ```
 
 Plain helpers in `{{module}}/` are imported directly:

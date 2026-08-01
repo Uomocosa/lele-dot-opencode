@@ -182,6 +182,23 @@ Consumer path: `use crate::{{module}}::plugin::ClickerPlugin;`
 
 > **Delegation call rule:** When a method file calls another method of the same struct, it MUST route through the struct's public API (e.g., `Config::coop()`), not call the other method file directly. The struct's thin delegates are the authoritative API surface. Example chain: `Config::lan_coop()` → thin delegate → `config_lan_coop::lan_coop()` → calls `Config::coop()` → thin delegate → `config_coop::coop()`.
 
+### Systems Subfolder
+
+Bevy system functions (functions registered via `app.add_systems()`) live in a `systems/` subfolder within the domain. This prevents filename collisions between Component types and system functions (e.g., `IncrementButton` Component at `increment_button.rs` vs a system that would share the same filename).
+
+```
+{{module}}/
+  systems/
+    mod.rs
+    poll_events.rs              # system function  (PUBLIC)
+    handle_input.rs             # system function  (PUBLIC)
+  increment_button.rs           # Component struct
+  plugin.rs                     # Plugin struct
+  plugin_build.rs               # plugin build method (PRIVATE)
+```
+
+Non-system functions (core logic, method files, plugin builds) stay flat in the domain folder. Systems in `systems/` may be re-exported at the domain root via `pub use` in `mod.rs` to keep consumer imports concise.
+
 ### Named Defaults
 
 A "named default" is a preset constructor (e.g., `Config::coop()`, `Config::pvp()`). It follows the same decomposition rule — goes in a method file `{{type}}_{{name}}.rs`.
@@ -279,6 +296,8 @@ Filenames follow the same rule.
 1. **"`inventory::Item` is too vague!"** — It isn't. `use inventory::Item;` reads as "an inventory Item."
 2. **"Multiple states in network!"** — Add a disambiguator: `PeerState`, `ConnectionState`. The qualifier describes *what kind* — it does NOT echo the module name.
 3. **"Bevy `Plugin` trait collision?"** — Rust resolves traits and types independently. `impl bevy::prelude::Plugin for Plugin { ... }` works.
+
+> **After flattening:** When the user eliminates subfolders through flattening, the former folder-based prefixes become leaf-level disambiguators, not echoes. A type like `CliPlugin` in a flat `clicker/` domain is a **disambiguator** (distinguishes from the main `Plugin`), not an echo — because the `cli/` subfolder no longer exists. The test is: *does a folder with that name still exist in the current module hierarchy?* If the folder is gone, the prefix is a valid disambiguator.
 
 ## 5. Module Exporting & Flattening (CRITICAL)
 

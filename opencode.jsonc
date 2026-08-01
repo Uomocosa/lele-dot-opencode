@@ -1,19 +1,16 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode-go/deepseek-v4-flash",
+  "model": "opencode-go/deepseek-v4-pro",
   "snapshot": false,
   "default_agent": "plan",
   "provider": {
     "opencode-go": {
       "models": {
-        "deepseek-v4-flash": {
-          "variants": {
-            "high": {
-              "reasoningEffort": "high"
-            }
+        "deepseek-v4-pro": {
+          "options": {
+            "reasoningEffort": "max"
           }
-        },
-        "deepseek-v4-pro": {}
+        }
       }
     }
   }
