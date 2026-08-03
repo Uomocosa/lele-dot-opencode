@@ -79,23 +79,23 @@ Events are consumed via `MessageWriter<T>` / `MessageReader<T>` (the newer Bevy 
 
 ## 2. Bevy System Conventions
 
-Systems are plain functions living in the domain folder. File naming follows the function name (snake_case).
+Systems are plain functions living in the `{{module}}/bevy_systems/` folder. File naming follows the function name (snake_case).
 
 ### System Parameters
 
 Use `Res<T>` / `ResMut<T>` for resources, `Query<&T, &mut T>` for components, `Commands` for spawning, `MessageWriter<T>` / `MessageReader<T>` for events:
 
 ```rust
-// {{module}}/poll_network.rs
+// {{module}}/bevy_systems/poll_network.rs
 use bevy::prelude::*;
-use crate::{{module}}::{Session, RemoteInputBuffer, NetworkState, PeerState, Event};
+use crate::{{module}};
 
 pub fn poll_network(
-    mut session: ResMut<Session>,
-    mut input_buffer: ResMut<RemoteInputBuffer>,
-    mut network_state: ResMut<NetworkState>,
-    mut peer_state: ResMut<PeerState>,
-    mut events: MessageWriter<Event>,
+    mut session: ResMut<{{module}}::Session>,
+    mut input_buffer: ResMut<{{module}}::RemoteInputBuffer>,
+    mut network_state: ResMut<{{module}}::NetworkState>,
+    mut peer_state: ResMut<{{module}}::PeerState>,
+    mut events: MessageWriter<{{module}}::Event>,
 ) { ... }
 ```
 
@@ -106,17 +106,17 @@ Register systems with `app.add_systems()` inside the Plugin's `build` method:
 ```rust
 // {{module}}/plugin_build.rs
 use bevy::prelude::*;
-use crate::{{module}}::{Plugin, Tick, NetworkState, Session};
+use crate::{{module}};
 
-pub fn build(_plugin: &Plugin, app: &mut App) {
-    app.init_resource::<Tick>()
-       .init_resource::<NetworkState>()
-       .insert_resource(Session::new(...))
+pub fn build(_plugin: &{{module}}::Plugin, app: &mut App) {
+    app.init_resource::<{{module}}::Tick>()
+       .init_resource::<{{module}}::NetworkState>()
+       .insert_resource({{module}}::Session::new(...))
        .add_systems(FixedUpdate, (
-           crate::{{module}}::poll_network,
-           crate::{{module}}::log_peer_count,
-           crate::{{module}}::broadcast,
-           crate::{{module}}::apply_remote_inputs,
+           {{module}}::bevy_systems::poll_network,
+           {{module}}::bevy_systems::log_peer_count,
+           {{module}}::bevy_systems::broadcast,
+           {{module}}::bevy_systems::apply_remote_inputs,
        ));
 }
 ```
@@ -128,12 +128,12 @@ Use `FixedUpdate` for fixed-timestep game logic, `Update` for per-frame UI/input
 When a system requires a Bevy `App` context, construct a minimal working `App` inside the test:
 
 ```rust
-// {{module}}/detect_click.rs
+// {{module}}/bevy_systems/detect_click.rs
 use bevy::prelude::*;
-use crate::{{module}}::{Owner, ClickCounter};
+use crate::{{module}};
 
 pub fn detect_click(
-    mut query: Query<(&Owner, &mut ClickCounter, &GlobalTransform)>,
+    mut query: Query<(&{{module}}::Owner, &mut {{module}}::ClickCounter, &GlobalTransform)>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
 ) {
@@ -146,13 +146,14 @@ pub fn detect_click(
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use crate::{{module}};
 
     #[test]
     fn test_usage() {
         let mut app = App::new();
         app.world_mut().spawn((
-            Owner(PeerId::random()),
-            ClickCounter { count: 0 },
+            {{module}}::Owner(PeerId::random()),
+            {{module}}::ClickCounter { count: 0 },
             GlobalTransform::default(),
         ));
 
@@ -163,7 +164,7 @@ mod tests {
         app.add_systems(Update, detect_click);
         app.update();
 
-        let mut query = app.world_mut().query::<&ClickCounter>();
+        let mut query = app.world_mut().query::<&{{module}}::ClickCounter>();
         let counter = query.single(app.world());
         assert_eq!(counter.count, 1);
     }
@@ -205,12 +206,12 @@ When composing multiple plugins, add them as a tuple:
 
 ```rust
 // main.rs or plugin builder
-use crate::structs::p2p::Plugin as P2pPlugin;
-use crate::structs::sync::Plugin as SyncPlugin;
+use crate::p2p;
+use crate::sync;
 
 app.add_plugins((
-    P2pPlugin::new(config),
-    SyncPlugin,
+    p2p::Plugin::new(config),
+    sync::Plugin,
 ));
 ```
 
@@ -225,7 +226,7 @@ app.add_plugins((
 
 ## 6. Internal Domain Layout
 
-Every domain lives in a single folder under `src/`. Structs, methods, systems, and types are all co-located. **System functions live in a `systems/` subfolder** to avoid filename collisions with Component types. No `structs/`/`methods/`/`system/` split.
+Every domain lives in a single folder under `src/`. Structs, methods, systems, and types are all co-located. **System functions live in a `bevy_systems/` subfolder** to avoid filename collisions with Component types. No `structs/`/`methods/`/`system/` split.
 
 ```
 src/
@@ -241,7 +242,7 @@ src/
     peer_state_accept_peer.rs    # method  (PRIVATE)
     click_counter.rs             # #[derive(Component)] struct ClickCounter
     event.rs                     # #[derive(Message)] enum Event
-    systems/
+    bevy_systems/
       mod.rs
       poll_network.rs            # system function  (PUBLIC)
       broadcast.rs               # system function  (PUBLIC)
@@ -251,7 +252,7 @@ src/
 **Visibility rules:**
 - Struct types → `pub mod <name>;` + `pub use <name>::<Type>;` in mod.rs (public)
 - Method files → `mod <struct>_<method>;` in mod.rs (PRIVATE)
-- System functions → `pub mod systems;` in mod.rs; re-export individual systems via `pub use systems::<name>::<name>;` in mod.rs (public)
+- System functions → `pub mod bevy_systems;` in mod.rs — NOT re-exported at domain root. `bevy_systems/mod.rs` flattens via `pub use` (see lele-syntax-rs Rule 3)
 - Pure enums → `pub mod <name>;` + `pub use <name>::<Type>;` in mod.rs (public)
 
 **mod.rs example:**
@@ -265,24 +266,20 @@ mod peer_state;
 mod peer_state_accept_peer;
 mod click_counter;
 mod event;
-pub mod systems;
+pub mod bevy_systems;
 
 pub use click_counter::ClickCounter;
 pub use config::Config;
 pub use event::Event;
 pub use peer_state::PeerState;
 pub use plugin::Plugin;
-pub use systems::poll_network::poll_network;
-pub use systems::broadcast::broadcast;
-pub use systems::detect_click::detect_click;
 ```
 
 **Consumer imports:**
 ```rust
-// Types and re-exported systems — direct import
-use crate::{{module}}::Plugin;
 use crate::{{module}};
-{{module}}::poll_network(...);  // re-exported from systems/
+// {{module}}::plugin::Plugin
+// {{module}}::bevy_systems::poll_network(...)
 ```
 
 Method files are never imported directly — they are called exclusively through the struct's thin delegates.
@@ -296,7 +293,7 @@ A **system function** is any function registered with `app.add_systems()` inside
 
 | Function type | Location | Example |
 |---|---|---|
-| Registered in `add_systems()` | `{{module}}/systems/` | `systems/poll_network.rs` |
+| Registered in `add_systems()` | `{{module}}/bevy_systems/` | `bevy_systems/poll_network.rs` |
 | Plain helper (no SystemParams) | Inline in the calling system file, or as a level file in `{{module}}/` | `handle_incoming_message.rs` |
 | Internal builder/spawn helper used only by one system | Same file as the calling system (private helper) | `spawn_remote_player` inside `handle_player_join.rs` |
 
@@ -304,17 +301,20 @@ A function that takes a Bevy type as a plain reference (e.g., `&ButtonInput<KeyC
 
 ### Consumer Imports
 
-Systems registered in `{{module}}/systems/` must be imported through the domain module:
+Systems registered in `{{module}}/bevy_systems/` are accessed via domain prefix:
+
 ```rust
 // {{module}}/plugin_build.rs
 use crate::{{module}};
 
-{{module}}::systems::poll_network::poll_network
+app.add_systems(FixedUpdate, {{module}}::bevy_systems::poll_network);
 ```
 
-Plain helpers in `{{module}}/` are imported directly:
+Plain helpers in `{{module}}/` are accessible through the domain module:
+
 ```rust
-use crate::{{module}}::handle_incoming_message;
+use crate::{{module}};
+{{module}}::handle_incoming_message(...);
 ```
 
 ## 8. Command Pattern: Core Logic + Wrapper Systems
@@ -334,11 +334,11 @@ Pure function with no Bevy system parameters. Named after the action:
 
 ```rust
 // {{module}}/increment.rs
-use crate::{{module}}::ClickerState;
+use crate::{{module}};
 
-pub fn increment(state: &mut ClickerState, amount: u64) {
+pub fn increment(state: &mut {{module}}::ClickerState, amount: u64) {
     state.count = state.count.wrapping_add(amount);
-    let _ = state.cmd_tx.send(ClickerCommand::Increment { count: state.count });
+    let _ = state.cmd_tx.send({{module}}::ClickerCommand::Increment { count: state.count });
 }
 ```
 
@@ -355,13 +355,12 @@ Thin Bevy systems that extract input and call the core logic. Named with a suffi
 ```rust
 // {{module}}/increment_button.rs
 use bevy::prelude::*;
-use crate::{{module}}::IncrementButton;
-use crate::{{module}}::ClickerState;
+use crate::{{module}};
 use super::increment;
 
 pub fn increment_button(
-    interaction: Query<&Interaction, (Changed<Interaction>, With<IncrementButton>)>,
-    mut state: ResMut<ClickerState>,
+    interaction: Query<&Interaction, (Changed<Interaction>, With<{{module}}::IncrementButton>)>,
+    mut state: ResMut<{{module}}::ClickerState>,
 ) {
     for interaction in &interaction {
         if *interaction == Interaction::Pressed {
