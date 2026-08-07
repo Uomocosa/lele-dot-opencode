@@ -5,25 +5,10 @@ description: Use for Rust code in this project. Enforces atomic file structure (
 
 # SYNTAX & ARCHITECTURE GUIDELINES
 
-## Linter-Enforced Rules
+Conventions are enforced by `lele_lint` — see **lele-lint-rs** for the full error code reference,
+how to run and fix violations.
 
-These rules are checked by `lele_lint` (`cargo run --manifest-path ../lele_lint/Cargo.toml` from any project directory).
-Run it after making changes and fix any violations.  Add `// no test_usage necessary`
-to any file that legitimately does not need a `test_usage` block.
-
-| Rule | What `lele_lint` checks |
-|------|--------------------------|
-| Snake-case files/dirs | All `.rs` filenames and directories under `src/` are `snake_case` |
-| Method file visibility | `<struct>_<method>.rs` files must be `mod` (private), never `pub mod` or `pub use` |
-| Cross-domain re-exports | `pub use crate::other_domain::Type` in a `mod.rs` is forbidden; use `lib.rs` |
-| Test presence | Non-exempt files must contain a `test_usage` test inline (E006) |
-| Test location | No `tests/` directories under `src/` (E007) |
-| Positional fields | No `.0` or `.1` field access; define structs with named fields (E009) |
-| Trivial accessors | Getters/setters that just return a `pub` field → remove the method (E010) |
-| Domain-prefix imports | `use crate::module::Type` → `use crate::module;` then `module::Type` (E011) |
-| Thin delegate format | Delegate `impl` blocks must have `#[rustfmt::skip]`, `super::` imports, 2-segment dispatch (E012) |
-| Constructor `#[rustfmt::skip]` | `impl Default` and constructors must NOT use `#[rustfmt::skip]` (E013) |
-| Logging | Use `tracing!` macros, not `println!`/`eprintln!`/`dbg!` (skill only, not linter-enforced) |
+Run linter after changes: `cargo run --manifest-path ../lele_lint/Cargo.toml`
 
 ## Template Convention
 
@@ -115,7 +100,7 @@ mod tests {
 ```
 
 **Thin delegate dispatch:** The struct file imports `use super::config_new;` and the
-delegate method calls `config_new::new()` — exactly 2 segments, no crate paths.
+delegate method calls `config_new::new()` — convention: 2-segment `super::` dispatch, no crate paths.
 
 **Delegation call rule:** When a method file needs to call another method of the same
 struct, route through the struct's public API (e.g., `Config::coop()`), not directly.
@@ -215,5 +200,4 @@ cargo run --manifest-path ../lele_lint/Cargo.toml
 | Method file (in struct file) | `super::` | `use super::config_new;` |
 | External crate types | Direct | `use bevy::prelude::*;` |
 
-Thin delegates in struct files use `use super::{{type}}_{{function}};` and dispatch as
-`{{type}}_{{function}}::{{function}}(self, ...)` — exactly 2 segments.
+Thin delegates in struct files dispatch via `use super::{{type}}_{{function}};` → `{{type}}_{{function}}::{{function}}(self, ...)`. Convention: 2-segment `super::` path.
