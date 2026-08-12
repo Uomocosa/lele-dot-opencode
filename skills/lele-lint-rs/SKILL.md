@@ -34,6 +34,9 @@ Run from any project directory. `lele_lint` scans every `.rs` file under `src/`.
 | E015 | helper_count | Max 2 unannotated private helpers. Mark each with `// needed helper:` above. |
 | E016 | single_caller_type | Type with 1 caller and 0 thin delegates → define in the caller's file. |
 | E017 | method_file_co_location | `<type>_<method>.rs` must reside in the same directory as `<type>.rs`. |
+| E018 | single_field_newtype | 1 field → tuple newtype `X(T)` with `#[derive(Deref)]`; ≥2 fields → named `{ a, b }`; ≥2-field tuple forbidden. |
+| E019 | mod_rs_purity | `mod.rs` may only declare `mod`/`pub mod` + `pub use`; no private `use`, impls, fns, or `#[cfg(test)]` modules. |
+| E020 | no_crate_paths | `crate::` may only appear inside `use` items (e.g. `use crate::module;`); any `crate::` in expression/type/signature position outside `lib.rs`/`main.rs` is an error. |
 
 ## Per-Code Detail
 
@@ -129,6 +132,29 @@ Run from any project directory. `lele_lint` scans every `.rs` file under `src/`.
 **Triggers when:** A file named `<type_snake>_<method>.rs` does not reside in the same directory as `<type>.rs`.
 
 **Fix:** Move the method file into the same directory as its type file. Method files are always co-located with their struct.
+
+### E018 — single_field_newtype
+
+**Triggers when:** A struct's field arity doesn't match the required shape:
+- 1 field but defined as a **named** struct (e.g. `pub struct X { pub value: u64 }`).
+- 1 field as a tuple newtype **without** `#[derive(Deref)]`.
+- 2+ fields as a **tuple** struct (e.g. `pub struct Pair(pub String, pub u32)`).
+
+**Fix:** 
+- 1 field → `pub struct X(T)` with `#[derive(…, Deref)]` (from `derive_more`). Access via deref (`*x`, method calls); `DerefMut` optional.
+- 2+ fields → named fields `{ a: A, b: B }`. Never use a 2+-field tuple struct.
+
+### E019 — mod_rs_purity
+
+**Triggers when:** A `mod.rs` contains anything other than `mod`/`pub mod` declarations and `pub use` re-exports — e.g. private `use` imports, structs, fns, impls, consts, or `#[cfg(test)] mod tests` blocks.
+
+**Fix:** Declare submodules with `mod`/`pub mod` and re-export only with `pub use`. Move private imports into function files, and move `#[cfg(test)]` test modules into the file they test.
+
+### E020 — no_crate_paths
+
+**Triggers when:** A `crate::` path appears anywhere other than the path of a `use` item — e.g. `own_id: crate::boxes::PlayerId` in a type position, `crate::foo()` in an expression, a thin delegate dispatching via `crate::module::fn` — in any file that is not the crate root (`lib.rs`/`main.rs`). `pub(crate)` visibilities are exempt.
+
+**Fix:** Add a top-level `use crate::<module>;` import and reference `<module>::Item` inline, or use a `super::`-relative path for same-domain items. Keep `crate::` out of expression/type/signature positions entirely.
 
 ---
 

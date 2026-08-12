@@ -1,6 +1,6 @@
 ---
 name: lele-syntax-rs
-description: Use for Rust code in this project. Enforces atomic file structure (snake_case files everywhere, co-located domain folders), module flattening, thiserror error handling, inline testing, domain-prefix imports, no trivial accessors, and no positional fields.
+description: Use for Rust code in this project. Enforces atomic file structure (snake_case files everywhere, co-located domain folders), module flattening, thiserror error handling, inline testing, domain-prefix imports, no trivial accessors, and struct field shape (single-field structs are tuple newtypes with #[derive(Deref)]; multi-field structs use named fields).
 ---
 
 # SYNTAX & ARCHITECTURE GUIDELINES
@@ -201,3 +201,13 @@ cargo run --manifest-path ../lele_lint/Cargo.toml
 | External crate types | Direct | `use bevy::prelude::*;` |
 
 Thin delegates in struct files dispatch via `use super::{{type}}_{{function}};` → `{{type}}_{{function}}::{{function}}(self, ...)`. Convention: 2-segment `super::` path.
+
+**`crate::` placement (E020):** `crate::` may only appear inside `use` items (e.g. `use crate::clicker;`), never inline in expression/type/signature positions — outside the crate root (`lib.rs`/`main.rs`) it is an E020 error. Cross-domain references go through a top-level `use crate::<module>;` import, not inline `crate::` paths.
+
+## 12. Struct Field Shape (E018 + E009)
+Field arity decides struct shape, enforced by `lele_lint`:
+- **Exactly one field** → MUST be a **tuple newtype** `pub struct X(T)` **with `#[derive(…, Deref)]`** (from `derive_more`). Access via deref (`*x`, method calls), never `.0`.
+- **Two or more fields** → MUST use **named fields** `{ a: A, b: B }`. Tuple structs with ≥2 fields are forbidden.
+- **`DerefMut`** is optional — only when the type needs mutation through deref (`*counter += 1`).
+- Positional access (`.0`, `.1`) is banned (E009); `Deref` makes it unnecessary.
+
