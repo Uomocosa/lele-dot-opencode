@@ -1,4 +1,0 @@
-{
-  "name": "opencode-create-commands",
-  "description": "Create or edit opencode slash commands: markdown and JSON config, template placeholders, shell injection, file references, agent routing."
-}

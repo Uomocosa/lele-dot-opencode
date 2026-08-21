@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "test-orchestrator": {
+      "type": "local",
+      "command": [
+        "{env:FBX_MCP_EXE}"
+      ],
+      "enabled": true
+    }
+  }
+}

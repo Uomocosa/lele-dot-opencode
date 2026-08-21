@@ -1,4 +1,0 @@
-{
-  "name": "plan-remove-dead-code-rs",
-  "description": "Find Rust files whose primary pub item has zero internal consumers in a crate's src/, for user evaluation."
-}

@@ -8,7 +8,7 @@
       "models": {
         "deepseek-v4-pro": {
           "options": {
-            "reasoningEffort": "max"
+            "reasoningEffort": "low"
           }
         }
       }

@@ -1,4 +1,0 @@
-{
-  "name": "bevy",
-  "description": "Bevy game engine patterns for Rust: Plugin struct+delegate separation, Component/Resource/Message types, system conventions, testing with App, plugin composition, derive macros for bevy 0.18."
-}

@@ -1,1 +1,0 @@
-/home/uomocosa/Syncthing/[AAI] Agentic AI/rust_projects/projects/lele_lint/lele_syntax_rs_skill.md

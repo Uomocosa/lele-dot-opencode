@@ -1,4 +1,0 @@
-{
-  "name": "opencode-git-workflow",
-  "description": "Git workflow guidance: commit conventions, atomic commits, branching strategy, rebase workflow, conflict resolution, stashing, dangerous-command safeguards."
-}

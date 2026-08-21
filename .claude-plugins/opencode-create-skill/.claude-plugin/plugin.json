@@ -1,4 +1,0 @@
-{
-  "name": "opencode-create-skill",
-  "description": "Create reusable opencode agent skills, evaluating existing alternatives first and enforcing maximal generality across projects."
-}
