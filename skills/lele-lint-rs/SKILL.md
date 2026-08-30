@@ -7,7 +7,26 @@ How to run, interpret, and fix `lele_lint` violations.
 ```bash
 cargo run --manifest-path ../lele_lint/Cargo.toml
 ```
-Run from any project directory. `lele_lint` scans every `.rs` file under `src/`.
+Run from any project directory. `lele_lint` scans every `.rs` file under `src/` (finds the
+nearest `Cargo.toml` and requires a `src/`).
+
+### `--scan-folder` (scan specific folders)
+
+```bash
+# scan only the given folder(s) instead of src/ (one flag, comma-separated)
+cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contract
+```
+
+- Values are **relative to the invocation directory** (a leading `/` is stripped and treated as
+  root-relative). Keeps the default `find_cargo_root` behaviour when the flag is omitted.
+- Scans are **aggregated into one run/report/exit-code** (one module tree; diagnostics use the
+  real file paths).
+- **Skips** `target/`, `.git/`, `node_modules/` directories during the walk — so pointing it at a
+  cargo crate dir (e.g. `/contract`) does not descend into build artifacts.
+- A listed folder that is **missing or not a directory** is an error (`NoScanFolder`); a folder
+  that exists but has no `.rs` files is accepted (no diagnostics).
+- Useful when the invocation root has no `Cargo.toml`/`src/` but contains sub-crates to lint
+  (e.g. a workspace of contracts).
 
 ## Opt-outs
 
@@ -37,6 +56,8 @@ Run from any project directory. `lele_lint` scans every `.rs` file under `src/`.
 | E018 | single_field_newtype | 1 field → tuple newtype `X(T)` with `#[derive(Deref)]`; ≥2 fields → named `{ a, b }`; ≥2-field tuple forbidden. |
 | E019 | mod_rs_purity | `mod.rs` may only declare `mod`/`pub mod` + `pub use`; no private `use`, impls, fns, or `#[cfg(test)]` modules. |
 | E020 | no_crate_paths | `crate::` may only appear inside `use` items (e.g. `use crate::module;`); any `crate::` in expression/type/signature position outside `lib.rs`/`main.rs` is an error. |
+| E021 | clippy_config_cargo | `Cargo.toml` must have `[lints.clippy]` with `pedantic/nursery = {level="deny",priority=-1}` + 13 `deny` lints (minimum). |
+| E022 | clippy_config_clippy | `clippy.toml` must have `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests`, `allow-indexing-slicing-in-tests = true`. |
 
 ## Per-Code Detail
 
@@ -156,6 +177,18 @@ Run from any project directory. `lele_lint` scans every `.rs` file under `src/`.
 
 **Fix:** Add a top-level `use crate::<module>;` import and reference `<module>::Item` inline, or use a `super::`-relative path for same-domain items. Keep `crate::` out of expression/type/signature positions entirely.
 
+### E021 — clippy_config_cargo
+
+**Triggers when:** `Cargo.toml` lacks `[lints.clippy]` or any of `pedantic`/`nursery = {level="deny",priority=-1}` or the 13 `deny` lints (`unwrap_used`, `expect_used`, `indexing_slicing`, `arithmetic_side_effects`, `unreachable`, `unimplemented`, `unchecked_time_subtraction`, `todo`, `string_slice`, `panic_in_result_fn`, `panic`, `exit`, `as_conversions`).
+
+**Fix:** Add the minimum block to `Cargo.toml` (extendable). `workspace.lints.clippy` + `lints.workspace=true` also satisfies.
+
+### E022 — clippy_config_clippy
+
+**Triggers when:** `clippy.toml` missing at crate root or lacks `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests`, `allow-indexing-slicing-in-tests = true`.
+
+**Fix:** Create `clippy.toml` with the four `true` entries. Extra keys are allowed.
+
 ---
 
 ## Build Routine
@@ -164,8 +197,29 @@ Run from any project directory. `lele_lint` scans every `.rs` file under `src/`.
 cargo build --all-targets
 cargo clippy -- -D warnings
 cargo fmt -- --check
-cargo test --all-targets
+cargo nextest run --all-targets
+bacon clippy -- -- -D warnings
 cargo run --manifest-path ../lele_lint/Cargo.toml
 ```
 
-Always run after making changes. Fix violations before committing.
+Via devenv (per-crate `devenv.nix` with `packages = [ cargo-nextest bacon ]`):
+
+```
+devenv shell -- cargo build --all-targets
+devenv shell -- cargo clippy -- -D warnings
+devenv shell -- cargo fmt -- --check
+devenv shell -- cargo nextest run --all-targets
+devenv shell -- bacon clippy -- -- -D warnings
+cargo run --manifest-path ../lele_lint/Cargo.toml
+```
+
+Via tasks (per-crate):
+
+```
+devenv tasks run lele:verify       # build+clippy+fmt+nextest+lint (without bacon)
+devenv tasks run lele:bacon-clippy # bacon separately (requires TTY)
+devenv tasks run lele:nextest
+devenv tasks run lele:lint
+```
+
+Always run after making changes. At the end of every non-trivial change run `bacon clippy` before `lele_lint`; fix `clippy -D warnings` first, then lint violations. Test both direct and `devenv shell --` invocations when devenv is present.

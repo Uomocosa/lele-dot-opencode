@@ -189,7 +189,8 @@ to opt out. Exemptions:
 cargo build --all-targets
 cargo clippy -- -D warnings
 cargo fmt -- --check
-cargo test --all-targets
+cargo nextest run --all-targets
+bacon clippy -- -- -D warnings
 cargo run --manifest-path ../lele_lint/Cargo.toml
 ```
 
@@ -204,7 +205,13 @@ Thin delegates in struct files dispatch via `use super::{{type}}_{{function}};` 
 
 **`crate::` placement (E020):** `crate::` may only appear inside `use` items (e.g. `use crate::clicker;`), never inline in expression/type/signature positions — outside the crate root (`lib.rs`/`main.rs`) it is an E020 error. Cross-domain references go through a top-level `use crate::<module>;` import, not inline `crate::` paths.
 
-## 12. Struct Field Shape (E018 + E009)
+## 12. Clippy Config (E021 + E022)
+Every crate must have `[lints.clippy]` in `Cargo.toml` and `clippy.toml` at crate root — minimum defaults, may extend:
+- `Cargo.toml`: `pedantic/nursery = { level="deny", priority=-1 }` + 13 `deny` lints (`unwrap_used`, `expect_used`, `indexing_slicing`, `arithmetic_side_effects`, `unreachable`, `unimplemented`, `unchecked_time_subtraction`, `todo`, `string_slice`, `panic_in_result_fn`, `panic`, `exit`, `as_conversions`) — `E021`.
+- `clippy.toml`: `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests`, `allow-indexing-slicing-in-tests = true` — `E022`.
+`workspace.lints.clippy` + `lints.workspace=true` also satisfies `Cargo.toml`.
+
+## 13. Struct Field Shape (E018 + E009)
 Field arity decides struct shape, enforced by `lele_lint`:
 - **Exactly one field** → MUST be a **tuple newtype** `pub struct X(T)` **with `#[derive(…, Deref)]`** (from `derive_more`). Access via deref (`*x`, method calls), never `.0`.
 - **Two or more fields** → MUST use **named fields** `{ a: A, b: B }`. Tuple structs with ≥2 fields are forbidden.

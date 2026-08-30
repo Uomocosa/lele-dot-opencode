@@ -1,6 +1,6 @@
 ---
 name: freenet
-description: Use when developing Freenet contracts, delegates, or WebSocket clients. Covers WASM contract implementation, commutative monoid design, node modes (local vs network), the fdev tool, Makefile automation, and integration testing.
+description: Use when developing Freenet contracts, delegates, or WebSocket clients. Covers WASM contract implementation, commutative monoid design, node modes (local vs network), the fdev tool, Makefile automation, integration testing, and replica-split recovery (client-driven ContractRequest::Subscribe bridging, notification absorb-merge semantics).
 ---
 
 # Freenet Development Guide
@@ -13,6 +13,11 @@ Freenet apps have three components:
 - **UI**: Web UI connecting to the local node via WebSocket. Can be TypeScript/Vite or Rust (Dioxus).
 
 The client (CLI or UI) connects to the **local** freenet node via WebSocket at `127.0.0.1:7509`. Nodes communicate via P2P. The deterministic `ContractKey` routes requests globally — no IP sharing needed.
+
+> **Node roles & the ring (gateway vs client peer, bootstrap seeds, peer discovery):** load the
+> dedicated **`freenet-gateway`** skill. It covers `--is-gateway`/`--public-network-*`/
+> `--skip-load-from-network`/`--gateway`, mainnet join vs hermetic test meshes, and why peers only
+> see each other when they share ring membership ("discover each other via Freenet").
 
 ## Project Structure
 
@@ -105,6 +110,10 @@ impl ContractInterface for MyContract {
 
 ### Commutative Monoid Requirement
 
+> **Designing state/merge for reconciliation, scaling and trust?** Load the dedicated
+> **`freenet-contract-design`** skill for the delta-merge wall, the G-counter pattern,
+> O(users) vs O(clicks) scaling, and the contract-key-vs-client trust model.
+
 Contract state must be mergeable regardless of order (join-semilattice):
 - **Commutative**: merge order doesn't matter
 - **Associative**: grouping doesn't matter  
@@ -170,6 +179,26 @@ mod tests {
 ```bash
 cargo build --release --target wasm32-unknown-unknown
 ```
+
+### Contract identity is the wasm bytes + params (rebuild changes the key)
+
+`ContractInstanceId = Blake3(code_hash ‖ parameters)` and
+`CodeHash = Blake3(wasm_bytes)` (freenet-stdlib `key.rs`, `code.rs`). Consequences:
+
+- **A rebuild changes the contract key even for functionally identical source.** Rust/wasm
+  builds are not byte-reproducible (toolchain, flags, `lto`, `strip`, embedded metadata all
+  move the bytes), so `cargo build` twice on the same source generally yields two different
+  contract instances.
+- Different key ⇒ different logical contract ⇒ peers in different "rooms" that cannot see or
+  touch each other's state.
+- **Ship a single canonical, committed `.wasm`** (embedded via `include_bytes!`) so every
+  client joins the same contract. Do not rebuild per user/deployment.
+- Content-addressing is the enforcement lever: a peer running a *modified* contract gets a
+  different key and is excluded. To join your contract a peer must use the exact published
+  wasm + params, which run **your** `validate_state`/`update_state`. Open-sourcing the contract
+  does not weaken this gate — it makes the enforced rules auditable while the key still pins
+  the exact code. (It guarantees identical *functions* to all users, not honest *inputs* —
+  input-truth anti-cheat is a separate problem.)
 
 ## Client Development
 
@@ -293,6 +322,36 @@ loop {
     sleep(1s);
 }
 ```
+
+For **slot-map / CRDT state, absorbing a notification must MERGE (max/union per key), never
+replace** the local map. Ticks usually send single-key update data, so replace-based absorption
+wipes the other slots from the client's view on every notification and the app looks permanently
+unmerged (real bug observed in production code).
+
+## Replica Splits & Client-Driven Bridging (mainnet-verified)
+
+Concurrent first `Put`s of a fresh contract key can seed **disjoint replica groups** (see the
+`freenet-gateway` skill for the verified core-level root cause). Two retries that look right but
+do **not** work:
+
+- **Re-Get / re-issue Get-with-subscribe from a hosting node** — answered locally; no network hop.
+- **Re-`Put` the current state** — relays via gateway and times out (90s) without bridging; only
+  useful as an idempotent state push, not as recovery.
+
+The bridge that works (heals in ~10-60s on mainnet vs ~300s via the node's 5-min heartbeat):
+
+```rust
+// Send periodically (~30s) while the client suspects a split:
+let summary = StateSummary::from(bincode::serialize(&my_slot_map)?); // matches summarize_state
+client.send(ContractRequest::Subscribe { key: instance_id, summary: Some(summary) }).await?;
+// Expect SubscribeResponse, then state arrives as UpdateNotifications on the normal stream.
+```
+
+Also arm the bridge when **foreign values stop advancing** (frozen notification stream /
+`BROADCAST_NO_TARGETS` in node logs) — merged nodes can have stale subscriptions where foreign
+slots exist but never change. Track the sum of foreign slot values and refresh the
+"last foreign activity" timestamp only when it changes. Give both bridge legs a timeout so the
+tick loop is not starved (a subscribe can take tens of seconds to respond).
 
 ## fdev Tool (Publishing)
 
@@ -470,6 +529,9 @@ impl DelegateInterface for MyDelegate {
 | "Contract violates update_state idempotency" + "Marking contract as broken" | `update_state` ignores `data` and increments from `state` | Read new state from `data`, not `state` |
 | No `UpdateNotification` received | Using local-mode test node (`run_local_node` / `freenet local`). The `perform_contract_update` path returns `UpdateResponse` directly without calling `commit_state_update` → `send_update_notification`. | Use network-mode test node (`serve_client_api_with_listener` + `NodeConfig` + `run_network_node`) or connect to an external `freenet network` node via `--role publish\|subscribe`. |
 | Counter resets to 0 on restart | `Put { state: 0 }` overwrites existing state | Try `Get + subscribe` first; `Put` only on `NotFound` |
+| Counter drifts back / "never merges" with slot-map state | Client absorbs notifications by REPLACING the local map; ticks carry single-key updates so foreign slots get wiped each tick | Merge (max/union per key) absorbed maps, never replace |
+| Fresh-key replicas split; heal only at ~5-min boundaries | Concurrent `Put`s seeded disjoint replica groups; anti-entropy is neighbor-pair-only | Routed `ContractRequest::Subscribe { key, summary }` every ~30s from each seeder (see "Replica Splits & Client-Driven Bridging") |
+| Replica merged but client view frozen; node logs `BROADCAST_NO_TARGETS` | Stale subscription — no co-host advertisement | Re-`Subscribe`; detect staleness via foreign-value sums, not foreign-slot presence |
 | "unexpected response to get: UpdateNotification { .. }" | Stray notification from other client arrives before GetResponse | Loop on recv, `continue` on `UpdateNotification` |
 | `tikv-jemalloc-sys` configure fails (space in path) | Project path contains spaces | Move `freenet` crate to `[dev-dependencies]` |
 | WebSocket connection hangs | `connect_async` blocks indefinitely | Add `tokio::time::timeout(5s, ...)` |
