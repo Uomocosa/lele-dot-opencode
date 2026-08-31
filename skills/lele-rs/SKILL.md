@@ -49,13 +49,26 @@ When `devenv-rs` is in use, prefer `devenv` tasks/git-hooks over raw cargo invoc
 
 - `devenv tasks run` / `devenv test` replaces `cargo clippy -- -D warnings` + `cargo fmt -- --check` via `git-hooks.hooks.clippy` + `rustfmt`.
 - Local equivalent: `cargo build --all-targets && cargo clippy -- -D warnings && cargo fmt -- --check && cargo nextest run --all-targets && bacon clippy -- -- -D warnings && cargo run --manifest-path ../lele_lint/Cargo.toml`.
-- With devenv (per-crate): `devenv tasks run lele:verify` (build+clippy+fmt+nextest+bacon clippy+lint) and `devenv tasks run lele:bacon-clippy` (`bacon --headless clippy -- -- -D warnings`) separately; interactive `bacon clippy -- -- -D warnings` without `--headless` for TUI; `devenv shell -- cargo build --all-targets` etc. remain as manual fallbacks.
-- At the end of every non-trivial code change, run `bacon clippy -- -- -D warnings` before `lele_lint` (`cargo run --manifest-path ../lele_lint/Cargo.toml`); fix `clippy -D warnings` first, then lint violations.
+- With devenv (per-crate): `devenv tasks run lele:verify` (build+clippy+fmt+nextest+bacon clippy+lint) and `devenv tasks run lele:bacon-clippy` (`bacon --headless clippy -- -- -D warnings`) separately; interactive `bacon clippy -- -- -D warnings` without `--headless` for TUI; `devenv shell -- cargo build --all-targets` etc. remain as manual fallbacks — raw `cargo …` is the fallback only when `devenv.nix` is absent.
+- At the end of every non-trivial code change, run `devenv tasks run lele:bacon-clippy` (or `bacon clippy -- -- -D warnings` without devenv) before `lele_lint` (`devenv tasks run lele:lint` or `cargo run --manifest-path ../lele_lint/Cargo.toml`); fix `clippy -D warnings` first, then lint violations.
 
 Path with spaces (e.g. `[AAI] Agentic AI`) — prepend `CARGO_TARGET_DIR=/tmp/frt-build` to all cargo commands; devenv sets this via `env.CARGO_TARGET_DIR` if needed.
 
+## `#[allow(clippy::…)]` Gate — IMPORTANT — REALLY IMPORTANT
+
+**No agent may add `#[allow(clippy::…)]` / `#![allow(clippy::…)]` for `clippy::pedantic` + `clippy::nursery` on its own.**
+
+If `cargo clippy -- -D warnings` surfaces a `clippy::pedantic` or `clippy::nursery` lint:
+
+1. Report the exact lint + `file:line` (`Cargo.toml: E021` / `clippy.toml: E022` context).
+2. Propose the minimal fix: rewrite the code (`checked_add`, `try_from`, `Ipv4Addr::LOCALHOST`, `if let` vs `match`, etc.) as first choice; `#[allow]` only as last resort.
+3. **Stop and ask the user** — do not insert `#[allow]` unless the user explicitly says “allow X at Y”. The user gates all existing `#[allow]` for usefulness and will remove any deemed useless.
+4. Existing `#[allow]` in the codebase are not to be broadened or copied to new sites without the same explicit approval — flag them for review instead.
+
+Rationale: `E021` forces `pedantic=deny` + `nursery=deny`; per-site `allow` defeats the deny. Only the user decides which pedantic/nursery lints are noise for this workspace. This gate also applies to file-level `#![allow]` and `Cargo.toml` global `allow` overrides — both need explicit user approval.
+
 ## Per-Crate devenv.nix — Always Read First
 
-Before any `cargo build` / `cargo clippy` / `cargo nextest run` / `cargo run --manifest-path ../lele_lint/Cargo.toml` on a crate, read `<crate>/devenv.nix` (and `devenv.yaml` / `devenv.lock` if present). `tasks."lele:*"` there are the crate's canonical examples (`lele:verify`, `lele:nextest`, `lele:lint`, `lele:bacon-clippy` in `lele_lint:15-26`). Prefer `devenv tasks run <task>` / `devenv shell -- <cmd>` over raw `cargo …` when a task exists; fall back to raw `cargo nextest run --all-targets` only if `devenv.nix` is absent.
+Before any `cargo build` / `cargo clippy` / `cargo nextest run` / `cargo run --manifest-path ../lele_lint/Cargo.toml` on a crate, read `<crate>/devenv.nix` (and `devenv.yaml` / `devenv.lock` if present). `tasks."lele:*"` there are the crate's canonical examples (`lele:verify`, `lele:nextest`, `lele:lint`, `lele:bacon-clippy` in `lele_lint:15-26`). **If `devenv.nix` defines tasks, always prefer `devenv tasks run <task>` over running the task's underlying `cargo …` command by hand**; fall back to raw `cargo nextest run --all-targets` / `cargo clippy -- -D warnings` only if `devenv.nix` is absent.
 
 `devenv-rs` owns the per-crate `devenv.nix` template. Every Rust crate may have its own `devenv.nix` + `devenv.yaml` at the crate root; shared base can be imported via `imports = [ ../devenv.nix ]`. See `devenv-rs` for the template and composable/polyrepo pattern.

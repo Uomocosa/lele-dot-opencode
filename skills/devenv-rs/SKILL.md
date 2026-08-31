@@ -102,6 +102,8 @@ inputs:
 
 ## 4. Tasks — Starlark-like DAG
 
+> **Rule — prefer tasks over raw commands:** When a crate has `devenv.nix` with `tasks`, always run `devenv tasks run <task>` (e.g. `devenv tasks run lele:verify`, `devenv tasks run lele:nextest`) instead of invoking the task's underlying command by hand (`cargo clippy`, `cargo nextest run`, `cargo fmt`, `bacon clippy`, …). Read `devenv.nix` first to discover the canonical task; raw `cargo …` is the fallback only when `devenv.nix` is absent.
+
 ```nix
 # https://devenv.sh/tasks/
 tasks = {
@@ -124,7 +126,7 @@ tasks = {
 };
 ```
 
-`lele:verify` is the crate-local smoke including `bacon --headless clippy` before `lele_lint` (bacon also available separately via `lele:bacon-clippy`; interactive use is `bacon clippy -- -- -D warnings` without `--headless`). Run `devenv tasks run lele:verify` for the full chain, `devenv tasks run lele:nextest` for nextest only. Processes are tasks too: `devenv:processes:web-server`. Dependency states: `after = ["devenv:processes:db@ready"]` (default) vs `@completed`. See `https://devenv.sh/tasks/#dependency-states`.
+`lele:verify` is the crate-local smoke including `bacon --headless clippy` before `lele_lint` (bacon also available separately via `lele:bacon-clippy`; interactive use is `bacon clippy -- -- -D warnings` without `--headless`). Run `devenv tasks run lele:verify` for the full chain, `devenv tasks run lele:nextest` for nextest only — do not run `cargo nextest run --all-targets` or `cargo clippy -- -D warnings` directly when `devenv tasks run lele:*` exists. Processes are tasks too: `devenv:processes:web-server`. Dependency states: `after = ["devenv:processes:db@ready"]` (default) vs `@completed`. See `https://devenv.sh/tasks/#dependency-states`.
 
 ## 5. Git Hooks — Replaces clippy/fmt in CI
 
@@ -196,3 +198,4 @@ Shared devenv at workspace root, per-crate overrides for `targets`, `channel`, e
 - Do not commit `.pre-commit-config.yaml` or `.devenv/` to git.
 - Do not rebuild WASM per user for Freenet — ship canonical `contract.wasm` via `include_bytes!` (see `freenet` skill).
 - When project path has spaces, set `env.CARGO_TARGET_DIR = "/tmp/frt-build"` in devenv.nix or prefix cargo calls.
+- Do not add `#[allow(clippy::pedantic)]` / `#[allow(clippy::nursery)]` (or `Cargo.toml` global `allow` for them) without explicit user approval — see `lele-rs` `#[allow(clippy::…)]` Gate.
