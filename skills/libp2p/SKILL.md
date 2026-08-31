@@ -12,6 +12,16 @@ description: |
 
 **Target: libp2p 0.56.0** (latest). See [rust-libp2p releases](https://github.com/libp2p/rust-libp2p/releases) for version history. Key sub-crate versions: `libp2p-swarm` 0.47.0, `libp2p-identity` 0.2.12, `libp2p-core` 0.43.1.
 
+## Sources
+
+| Topic | URL |
+|-------|-----|
+| API docs (Swarm, SwarmBuilder, behaviours) | `https://docs.rs/libp2p` |
+| Tutorials / ping example | `https://github.com/libp2p/rust-libp2p/tree/master/examples` |
+| Repository / releases | `https://github.com/libp2p/rust-libp2p` |
+| Specification (protocols, transports) | `https://github.com/libp2p/specs` |
+| Cargo feature flags | `https://docs.rs/crate/libp2p/latest/features` |
+
 ## 1. Canonical SwarmBuilder Pattern
 
 The `SwarmBuilder` uses a type-state builder pattern with distinct phases:

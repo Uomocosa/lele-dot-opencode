@@ -11,9 +11,9 @@ Replaces `cargo test` with `cargo nextest run` for faster, isolated test executi
 
 | Topic | URL |
 |-------|-----|
-| Book (install, run, config, profiles) | `https://nexte.st/book/` |
-| Installation & `cargo nextest run` | `https://nexte.st/book/installation/` + `https://nexte.st/book/running/` |
-| Configuration & profiles | `https://nexte.st/book/configuration/` |
+| Home / book | `https://nexte.st/` |
+| Installation & running | `https://nexte.st/docs/installation/pre-built-binaries/` + `https://nexte.st/docs/running/` |
+| Configuration & profiles | `https://nexte.st/docs/configuration/` |
 | Repository / releases | `https://github.com/nextest-rs/nextest` |
 | Devenv package | `https://devenv.sh/packages/` (`pkgs.cargo-nextest`) |
 

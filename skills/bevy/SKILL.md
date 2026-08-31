@@ -9,6 +9,16 @@ Bevy engine patterns for Rust projects that depend on `bevy`. This skill may ove
 
 **Targets bevy 0.19.** For older versions, adjust `Message`/`MessageWriter`/`MessageReader` to `Event`/`EventWriter`/`EventReader` accordingly. See [bevy releases](https://github.com/bevyengine/bevy/releases) for version history.
 
+## Sources
+
+| Topic | URL |
+|-------|-----|
+| API docs (App, Component, Resource, Messages) | `https://docs.rs/bevy` |
+| Book / getting started | `https://bevy.org/learn/` |
+| Examples (per-subcrate) | `https://github.com/bevyengine/bevy/tree/main/examples` |
+| Migration guides / releases | `https://github.com/bevyengine/bevy/releases` |
+| Feature flags | `https://github.com/bevyengine/bevy/blob/main/Cargo.toml` |
+
 ## 1. Bevy Module & File Patterns
 
 ### Plugin Struct + Delegate Separation

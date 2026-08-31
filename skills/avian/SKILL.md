@@ -79,9 +79,15 @@ app.add_plugins((
 - Changeable tick rate changes physics only via per-second quantities (velocities, gravity) staying
   frame-rate independent — keep speeds/gravity authored per-second, not per-tick.
 
-## Reference
+## Sources
 
-- [Avian docs](https://fishrock123.github.io/avian-book/)
+| Topic | URL |
+|-------|-----|
+| API docs (Avian2D 0.3+) | `https://docs.rs/avian2d` |
+| Book / user guide | `https://docs.rs/avian2d/latest/avian2d/#documentation` |
+| Repository / releases | `https://github.com/avianphysics/avian` |
+| Discussions (determinism Q&A) | `https://github.com/avianphysics/avian/discussions` |
+
 - `found_problems/` — problem reports and their root causes
 
 {{project}}: a Rust/Bevy project using Avian. {{crate}}: the physics crate. {{module}}: the module
