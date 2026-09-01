@@ -1,6 +1,6 @@
 ---
 name: lele-rs
-description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, lele-lint-rs, devenv-rs, bevy, libp2p, freenet and related skills. Enforces atomic files, thin delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible devenv environments.
+description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, lele-lint-rs, devenv-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, thin delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible devenv environments.
 ---
 
 # lele-rs — Rust Stack Indexer (ALWAYS LOADED)
@@ -14,12 +14,12 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 | Rust syntax, file layout, delegates, imports, struct shape | `lele-syntax-rs` |
 | Linter error codes E001-E020, how to fix violations | `lele-lint-rs` |
 | Reproducible dev environment, Nix, languages, packages, tasks, services, hooks | `devenv-rs` |
-| Bevy ECS Plugin/Component/System patterns (bevy 0.19) | `bevy` |
+| Bevy ECS Plugin/Component/System patterns (bevy 0.19, Rust) | `bevy-rs` |
 | P2P networking SwarmBuilder, transports, stream protocols | `libp2p` |
 | Freenet contracts, delegates, WebSocket clients, node modes | `freenet` |
 | Freenet ring topology, gateways, peer discovery, hermetic meshes | `freenet-gateway` |
 | Freenet contract state/delta/merge design, CRDT, G-counter | `freenet-contract-design` |
-| Avian physics determinism caveat, rollback | `avian` |
+| Avian physics determinism caveat, rollback (Rust) | `avian-rs` |
 | Git history, commits, branches, rebase, stash | `opencode-git-workflow` |
 | Crate tag CI (test/build/release tag scheme) | `crate-tag-ci` (project skill `.opencode/skills/crate-tag-ci`) |
 | Cargo nextest test runner, crate-local `cargo nextest run --all-targets` | `cargo-nextest-rs` |
@@ -29,18 +29,19 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 | Serialization, `Serialize`/`Deserialize`, `rename_all`/`flatten`, data formats | `serde-rs` |
 | CLI parsing, `Parser`/`Args`/`Subcommand`/`ValueEnum`, `#[command]`/`#[arg]` | `clap-rs` |
 | Date-time, `Zoned`/`Timestamp`/`Span`, time zones, Temporal format | `jiff-rs` |
+| Function taxonomy — pure/impure vs honest/dishonest definitions, pseudocode | `definition-function-taxonomy` |
 
 ## Load Order
 
 1. `lele-rs` (this file) — always.
 2. `lele-syntax-rs` + `lele-lint-rs` — for any `src/` edit.
 3. `devenv-rs` — when touching `devenv.nix`, `devenv.yaml`, packages, services, tasks, or git-hooks.
-4. Domain skill (`bevy`, `libp2p`, `freenet`, ...) — when the crate depends on that engine/protocol.
+4. Domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...) — when the crate depends on that engine/protocol.
 
 ## Global Config Placement
 
 - Global skills live in `~/.config/opencode/skills/<name>/SKILL.md`.
-- Project filtering lives in `projects/opencode.json: permission.skill`. Pattern `*-rs` already allows `lele-rs`, `devenv-rs`, `cargo-nextest-rs`, `itertools-rs`, `criterion-rs`, `rayon-rs`, `serde-rs`, `clap-rs`, and `jiff-rs`; no explicit allow needed. Bare-name tool skills (`bevy`, `libp2p`) require exact `allow`.
+- Project filtering lives in `projects/opencode.json: permission.skill`. Pattern `*-rs` already allows `lele-rs`, `devenv-rs`, `cargo-nextest-rs`, `itertools-rs`, `criterion-rs`, `rayon-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `bevy-rs`, and `avian-rs`; no explicit allow needed. Bare-name tools (`libp2p`, `freenet`) require exact `allow`.
 - Always-loaded binding is `opencode.json: instructions[]` — add `~/.config/opencode/skills/lele-rs/SKILL.md`, `~/.config/opencode/skills/itertools-rs/SKILL.md`, `~/.config/opencode/skills/criterion-rs/SKILL.md`, `~/.config/opencode/skills/rayon-rs/SKILL.md`, and related `*-rs` skills there. `serde-rs`, `clap-rs`, and `jiff-rs` are on-demand via this leaf table (not autoloaded). See `~/.config/opencode/AGENTS.md: Skill Loading (MUST)`.
 
 ## Build Verification (with devenv)

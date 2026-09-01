@@ -1,6 +1,6 @@
 ---
-name: avian
-description: Use when working with the Avian 2D/3D physics engine (Rust, Bevy). Covers the critical determinism caveat — Avian's integrator parallelizes over Bevy's process-global ComputeTaskPool, so two engine Apps in one process cannot be bit-identical — plus plugin setup, fixed timestep, rollback sessions, and common footguns.
+name: avian-rs
+description: Use when working with the Avian 2D/3D physics engine (Rust crate, Bevy). Covers the critical determinism caveat — Avian's integrator parallelizes over Bevy's process-global ComputeTaskPool, so two engine Apps in one process cannot be bit-identical — plus plugin setup, fixed timestep, rollback sessions, and common footguns.
 ---
 
 # Avian (Bevy physics)

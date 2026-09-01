@@ -61,25 +61,30 @@ skill-name/
 
 Every skill must follow the naming convention so per-project filtering works.
 
-### Bare name vs suffix — how to decide
+### Naming — tier decides suffix
 
-- **Bare name** — the skill teaches a *platform, framework, or tool* (e.g., bevy engine, libp2p networking, pixi package manager, freenet platform). Even if the tool is Rust/Python/TypeScript-only, use bare name — it's a tool skill, not a convention skill.
-- **`*-rs` / `*-py` / `*-ts`** — the skill teaches *code conventions or patterns for that language* (e.g., Rust syntax rules, Python dead code detection, TypeScript patterns). These are language-convention skills.
-- **`*-{{language_fullname}}`** — only when a single tool has two or more language variants in `<available_skills>` (e.g., both `grpc-rust` and `grpc-python`). The suffix disambiguates which language. If only one variant exists, use bare name.
+* **General — opencode (`opencode-*`):** General opencode workflow/tooling (e.g., `opencode-git-workflow`, `opencode-mcp`). Always general, never language-specific.
+* **General — definitions (`definition-*`):** General language-agnostic definitions and pseudocode (e.g., `definition-function-taxonomy`). Always general, never language-specific.
+* **Language-specific (`*-rs`, `*-py`, `*-ts`):** Any skill tied to a single language MUST carry the suffix — including language-specific tools/crates (e.g., `bevy-rs`, `avian-rs`) and convention skills (e.g., `lele-syntax-rs`). A language-specific skill without a suffix is a violation.
+* **Language-agnostic tool (bare `{{tool_name}}`):** A cross-language protocol/platform MUST be bare with no suffix (e.g., `libp2p`, `freenet`). Adding `-rs`/`-py`/`-ts` to a language-agnostic tool is a violation. Main example: `libp2p` stays `libp2p`.
+
+No `*-(language_fullname)` multi-variant pattern — reuse `*-rs`/`*-py`/`*-ts` for per-language variants; the bare name is the agnostic protocol.
 
 | Pattern | Category | When to use | Example | Permissions filter |
 |---|---|---|---|---|
-| `opencode-*` | General workflow | Commands, git, workflows — any project/language | `opencode-git-workflow` | `"opencode-*": "allow"` (glob) |
-| **Bare name** | **Tool / framework** | **Skill teaches a platform (bevy, freenet, libp2p, pixi). Even if the tool is language-specific, use bare name.** | `bevy`, `libp2p`, `pixi`, `freenet` | `"name": "allow"` (exact) |
-| `*-rs` / `*-py` / `*-ts` | Language conventions | Skill teaches code standards for that language (syntax rules, patterns, dead code removal). NOT a platform/tool. | `lele-syntax-rs`, `plan-remove-dead-code-py` | `"*-rs": "allow"` (glob) |
-| `*-{{lang_full}}` | Multi-lang tool disambiguation | Only when the same tool has 2+ language variants in `<available_skills>` | `grpc-rust`, `grpc-python` | Exact name only (no glob) |
+| `opencode-*` | General workflow | Opencode workflow/tooling | `opencode-git-workflow` | `"opencode-*": "allow"` (glob) |
+| `definition-*` | General definitions | Language-agnostic definitions/pseudocode | `definition-function-taxonomy` | `"definition-*": "allow"` (glob) |
+| `{{tool_name}}` (bare) | Language-agnostic tool | Cross-language platform/protocol | `libp2p`, `freenet`, `pixi` | `"name": "allow"` (exact) |
+| `*-rs` / `*-py` / `*-ts` | Language-specific | Any single-language content (tool crate + conventions) | `bevy-rs`, `lele-syntax-rs` | `"*-rs": "allow"` (glob) |
 
 ### Three tiers of skills
 
 | Tier | Location | Scope | Example |
 |---|---|---|---|
-| **General** (`opencode-*`) | `~/.config/opencode/skills/` | Any project, any language | `opencode-git-workflow` |
-| **Language-specific** (`*-lang`) | `~/.config/opencode/skills/` | Filtered per-project via permissions | `plan-remove-dead-code-py` |
+| **General — opencode** (`opencode-*`) | `~/.config/opencode/skills/` | Any project, any language | `opencode-git-workflow` |
+| **General — definitions** (`definition-*`) | `~/.config/opencode/skills/` | Any project, any language | `definition-function-taxonomy` |
+| **Language-specific** (`*-rs`/`*-py`/`*-ts`) | `~/.config/opencode/skills/` | Filtered per-project via permissions | `bevy-rs`, `lele-syntax-rs` |
+| **Language-agnostic tool** (bare) | `~/.config/opencode/skills/` | Always listed, never auto-loaded | `libp2p`, `freenet` |
 | **Project-specific** | `.opencode/skills/` in each repo | That project only | Internal conventions |
 
 ### Per-project filtering
@@ -92,6 +97,7 @@ Each project's `opencode.json` uses `permission.skill` to select which global sk
     "skill": {
       "*": "deny",
       "opencode-*": "allow",
+      "definition-*": "allow",
       "*-py": "allow",
       "pixi": "allow"
     }

@@ -1,6 +1,6 @@
 ---
-name: bevy
-description: Use when working on projects that depend on the Bevy game engine. Covers Plugin struct+delegate separation, Component/Resource/Message types, system conventions (Res/ResMut/Query/Commands/MessageWriter), testing with App, plugin composition, internal module layout, and derive macros for bevy 0.19.
+name: bevy-rs
+description: Use when working on projects that depend on the Bevy game engine (Rust crate). Covers Plugin struct+delegate separation, Component/Resource/Message types, system conventions (Res/ResMut/Query/Commands/MessageWriter), testing with App, plugin composition, internal module layout, and derive macros for bevy 0.19.
 ---
 
 # BEVY-SPECIFIC SYNTAX & PATTERNS
