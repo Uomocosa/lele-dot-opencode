@@ -43,6 +43,7 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 - Global skills live in `~/.config/opencode/skills/<name>/SKILL.md`.
 - Project filtering lives in `projects/opencode.json: permission.skill`. Pattern `*-rs` already allows `lele-rs`, `devenv-rs`, `cargo-nextest-rs`, `itertools-rs`, `criterion-rs`, `rayon-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `bevy-rs`, and `avian-rs`; no explicit allow needed. Bare-name tools (`libp2p`, `freenet`) require exact `allow`.
 - Always-loaded binding is `opencode.json: instructions[]` — add `~/.config/opencode/skills/lele-rs/SKILL.md`, `~/.config/opencode/skills/itertools-rs/SKILL.md`, `~/.config/opencode/skills/criterion-rs/SKILL.md`, `~/.config/opencode/skills/rayon-rs/SKILL.md`, and related `*-rs` skills there. `serde-rs`, `clap-rs`, and `jiff-rs` are on-demand via this leaf table (not autoloaded). See `~/.config/opencode/AGENTS.md: Skill Loading (MUST)`.
+- **Tool-skill auto-load rule:** If any crate in the workspace depends on a tool/crate for which a skill exists (`bevy-rs`, `libp2p`, `freenet`, `freenet-gateway`, `freenet-contract-design`, `avian-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `reqwest-rs`, `criterion-rs`, `rayon-rs`, `itertools-rs`, etc.), add that skill to `opencode.json: instructions[]` so it is always loaded. If no crate uses the tool, keep the skill only as `permission.skill: allow` and load it on demand via the leaf table — do not add to `instructions[]`.
 
 ## Build Verification (with devenv)
 
