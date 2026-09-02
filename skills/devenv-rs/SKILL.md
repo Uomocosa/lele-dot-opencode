@@ -90,8 +90,8 @@ inputs:
 | **Languages** | `languages.rust.*` | `https://devenv.sh/languages/rust/` | `enable`, `channel` (`nixpkgs`/`stable`/`beta`/`nightly`), `version`, `components`, `targets = ["wasm32-unknown-unknown"]` for contracts, `toolchainFile`, `rustflags`, `mold`/`lld` |
 | **Packages** | `packages` | `https://devenv.sh/packages/` | 100k+ nixpkgs pkgs; `pkgs.bacon`, `cargo-nextest`, `cargo-generate`, plus `pkgs.watchexec` for scripts |
 | **Scripts** | `scripts.<name>.exec` | `https://devenv.sh/scripts/` | Shell snippets with own `packages`; callable directly in `enterShell`/`tasks` |
-| **Env / Basics** | `env.*`, `enterShell` | `https://devenv.sh/basics/` | `env.LD_LIBRARY_PATH`, `env.DATABASE_URL`, `CARGO_TARGET_DIR=/tmp/frt-build` when path has spaces |
-| **Tasks (DAG)** | `tasks."ns:name".exec/before/after` | `https://devenv.sh/tasks/` | DAG via `before`/`after` for `processes` readiness (`after = ["devenv:processes:db@ready"]`) and `devenv:enterShell`/`devenv:enterTest` lifecycle — **avoid `after` for leaf check tasks** (turns `fmt` into `build+clippy+fmt`, hits LLM timeout + `Blocking waiting for file lock` on shared `CARGO_TARGET_DIR`). Prefer independent leaves; chain only in a single CI `exec` if needed. `devenv tasks run` streams task output, but caller needs `2>&1` to surface `cargo` stderr (see §4). |
+| **Env / Basics** | `env.*`, `enterShell` | `https://devenv.sh/basics/` | `env.LD_LIBRARY_PATH`, `env.DATABASE_URL`, `CARGO_TARGET_DIR=/tmp/frt-build` when path has spaces — **must not be reused as WASM `target-dir` in `build.rs`** (see §4 WASM isolation). |
+| **Tasks (DAG)** | `tasks."ns:name".exec/before/after` | `https://devenv.sh/tasks/` | DAG via `before`/`after` for `processes` readiness (`after = ["devenv:processes:db@ready"]`) and `devenv:enterShell`/`devenv:enterTest` lifecycle — **avoid `after` for leaf check tasks** (turns `fmt` into `build+clippy+fmt`, hits LLM timeout + `Blocking waiting for file lock` on shared `CARGO_TARGET_DIR`). Prefer independent leaves; chain only in a single CI `exec` if needed. `devenv tasks run` streams task output, but caller needs `2>&1` to surface `cargo` stderr (see §4). Use `showOutput = true` so fresh `cargo` tasks that print `Finished` still stream. |
 | **Processes** | `processes.<name>.exec` | `https://devenv.sh/processes/` | Native manager, supervision, readiness probes, socket activation, `after = ["devenv:processes:db@ready"]`, `devenv up [-d]` |
 | **Services** | `services.<name>.enable` | `https://devenv.sh/services/` | 42 prebuilt services over processes: `services.postgres.enable`, `services.redis.enable`, `initialDatabases` |
 | **Git Hooks** | `git-hooks.hooks.<name>` | `https://devenv.sh/git-hooks/` | Via `git-hooks.nix`; `clippy`, `rustfmt`, `cargo-check`; custom `entry`; default runner `pkgs.prek`; `git-hooks.hooks.clippy.settings.allFeatures = true` |
@@ -106,15 +106,26 @@ inputs:
 ```nix
 # https://devenv.sh/tasks/
 tasks = {
-  "lele:build".exec = "cargo build --all-targets --features dev";
-  "lele:clippy".exec = "cargo clippy --all-targets --features dev -- -D warnings";
-  "lele:fmt".exec = "cargo fmt -- --check";
-  "lele:nextest".exec = "cargo nextest run --all-targets --features dev";
-  "lele:lint".exec = "cargo run --manifest-path ../lele_lint/Cargo.toml";
-  "lele:taxonomy_check".exec = "cargo run --manifest-path ../lele_function_taxonomy/Cargo.toml --features rustc-private -- --manifest-path ./Cargo.toml";
-  "freenet:contract-harness".exec = "cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture";
+  "lele:build" = { exec = "cargo build --all-targets --features dev"; showOutput = true; };
+  "lele:clippy" = { exec = "cargo clippy --all-targets --features dev -- -D warnings"; showOutput = true; };
+  "lele:fmt" = { exec = "cargo fmt -- --check"; showOutput = true; };
+  "lele:nextest" = { exec = "cargo nextest run --all-targets --features dev"; showOutput = true; };
+  "lele:lint" = { exec = "cargo run --manifest-path ../lele_lint/Cargo.toml"; showOutput = true; };
+  "lele:taxonomy_check" = { exec = "cargo run --manifest-path ../lele_function_taxonomy/Cargo.toml --features rustc-private -- --manifest-path ./Cargo.toml"; showOutput = true; };
+  "freenet:contract-harness" = { exec = "cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture"; showOutput = true; };
   # no after, no verify sink — each leaf does one job; use a single CI exec if chaining is needed
 };
+```
+
+Leaf tasks need `showOutput = true` so `devenv-tasks` (PR #2231) streams `stdout` via `println!` instead of capturing until failure — without it `cargo` `Finished` on fresh builds is swallowed and `| tail` on the caller hangs waiting for lines that never flush. Use `showOutput` not `| tail`; `tail` on fresh tasks blocks 120s timeout with `(no output)`.
+
+WASM isolation: when `env.CARGO_TARGET_DIR="/tmp/frt-build"` is set for space-in-path, `build.rs` must NOT reuse it for `contract/target`. Isolate:
+```rust
+// build.rs — DO NOT use CARGO_TARGET_DIR for wasm
+let wasm_target_dir = "contract/target".to_string();
+build_contract("contract/Cargo.toml", "contract.wasm", &wasm_target_dir, out);
+```
+Otherwise host `cargo` holds `/tmp/frt-build/.cargo-lock` while `build.rs` spawns inner `cargo --target-dir /tmp/frt-build` that `Blocking waiting for file lock`s itself → LLM timeout. `needs_build` mtime check hides it until `contract/src/lib.rs` is touched, so the bug appears intermittent.
 ```
 
 Leaf tasks are **independent** — `devenv tasks run lele:fmt 2>&1` runs only `cargo fmt` (<1s), not `build+clippy+fmt`. The old `after` chain (`lele:fmt.after=["lele:clippy"].after=["lele:build"]` → `lele:verify` sink, plus `lele:bacon-clippy` via `bacon --headless`) made every leaf pay the full pipeline cost (2-5min, `Blocking waiting for file lock` on shared `CARGO_TARGET_DIR=/tmp/frt-build`, LLM 120s timeout) and is now an anti-pattern — deleted. `bacon` is TUI-only (`bacon clippy` interactive); it has no better clippy output than `cargo clippy` and `bacon --headless` hangs in tasks — do not add it to `packages` for tasks. Single-line `exec = "cargo ..."` streams cleanly; avoid `set -e; echo ">>> ..."; ...; echo "done"` wrappers and duplicate `cargo clippy --tests` (`--all-targets` already covers it). Processes are tasks too: `devenv:processes:web-server`. Dependency states: `after = ["devenv:processes:db@ready"]` (default) vs `@completed`. See `https://devenv.sh/tasks/#dependency-states`.
@@ -221,8 +232,10 @@ Shared devenv at workspace root, per-crate overrides for `targets`, `channel`, e
 
 - Do not run `rustup` inside devenv — toolchain comes from `languages.rust`.
 - Do not commit `.pre-commit-config.yaml` or `.devenv/` to git.
-- Do not rebuild WASM per user for Freenet — ship canonical `contract.wasm` via `include_bytes!` (see `freenet` skill).
-- When project path has spaces, set `env.CARGO_TARGET_DIR = "/tmp/frt-build"` in devenv.nix or prefix cargo calls.
+ - Do not rebuild WASM per user for Freenet — ship canonical `contract.wasm` via `include_bytes!` (see `freenet` skill).
+ - When project path has spaces, set `env.CARGO_TARGET_DIR = "/tmp/frt-build"` in devenv.nix or prefix cargo calls.
+ - When `env.CARGO_TARGET_DIR` is set, `build.rs` must NOT reuse it for WASM `contract/target` — use isolated `wasm_target_dir = "contract/target"` (see §4 WASM isolation) to avoid `Blocking waiting for file lock` self-deadlock.
+ - Always set `showOutput = true` on `tasks` leaves — without it `devenv-tasks` captures `stdout` and fresh `cargo` (`Finished` only) appears as `{}` with no streaming. **NEVER add `| tail`, `| head`, `| grep` or any pipe to `devenv tasks run`** — pipes swallow the streams and mask the hang (fresh `cargo` with zero lines blocks `tail` until 120s timeout with `(no output)`). Use `showOutput = true` and bare `devenv tasks run <task> 2>&1` instead.
 - Do not add `#[allow(clippy::pedantic)]` / `#[allow(clippy::nursery)]` (or `Cargo.toml` global `allow` for them) without explicit user approval — see `lele-rs` `#[allow(clippy::…)]` Gate.
 - Do not add `bacon` / `bacon --headless` as a task (`lele:bacon-clippy`) — `bacon` is interactive TUI only (`bacon clippy`), headless hangs; `cargo clippy` already satisfies `-D warnings`.
 - Do not chain leaf tasks with `after` (e.g. `lele:fmt.after=["lele:clippy"]`) — it makes every LLM call pay the full pipeline and hit `Blocking waiting for file lock` / 120s timeout. Keep leaves independent; delete the `lele:verify` sink.

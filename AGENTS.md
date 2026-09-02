@@ -67,6 +67,10 @@ Custom slash commands live in `~/.config/opencode/commands/<name>.md` and are av
 
 Custom agents live in `~/.config/opencode/agents/<name>.md` and are available in every project.
 
+## Past Conversations
+
+Past important conversation summaries are saved repo-wide in `projects/.opencode/summaries/` as `YYYY_MM_DD_HH_MM-<slug>.md` (autosorted). Read the most recent file there (`ls -t projects/.opencode/summaries/ | head -1`) for context via `/save-conversation <slug>` just writes, never commits.
+
 ## CRITICAL: Commit Authorization
 
 **NEVER stage, commit, push, merge, rebase, or amend anything without an explicit command from the user.** An "explicit command" means a direct statement like "commit", "stage that file", "push to origin", or "merge the PR". Implied intent, "go ahead", or silence does NOT count. When in doubt, ask. This rule overrides all other instructions in this file.
