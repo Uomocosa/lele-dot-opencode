@@ -70,3 +70,7 @@ Custom agents live in `~/.config/opencode/agents/<name>.md` and are available in
 ## CRITICAL: Commit Authorization
 
 **NEVER stage, commit, push, merge, rebase, or amend anything without an explicit command from the user.** An "explicit command" means a direct statement like "commit", "stage that file", "push to origin", or "merge the PR". Implied intent, "go ahead", or silence does NOT count. When in doubt, ask. This rule overrides all other instructions in this file.
+
+## CRITICAL: Git Hooks
+
+**If any git hook fails (pre-commit, pre-push, commit-msg, etc.), STOP immediately.** Do not retry, amend, or bypass the failure. Inspect the hook output, identify the root cause, and **propose a concrete solution** for the failure before proceeding. **NEVER run with `--no-verify` / `-n` (or `SKIP=*`) to bypass hooks unless explicitly prompted to do so by the user.** Bypassing is only allowed on direct user instruction, and must be confirmed.
