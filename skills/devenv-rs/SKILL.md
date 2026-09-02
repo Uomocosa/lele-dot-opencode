@@ -36,9 +36,8 @@ Per-crate `devenv.nix` is the source of truth; `devenv.yaml` pins inputs. Exampl
 
   # https://devenv.sh/packages/
   packages = with pkgs; [
-    bacon
-    cargo-seek
     cargo-nextest
+    cargo-seek
     cargo-generate
   ];
 
@@ -92,7 +91,7 @@ inputs:
 | **Packages** | `packages` | `https://devenv.sh/packages/` | 100k+ nixpkgs pkgs; `pkgs.bacon`, `cargo-nextest`, `cargo-generate`, plus `pkgs.watchexec` for scripts |
 | **Scripts** | `scripts.<name>.exec` | `https://devenv.sh/scripts/` | Shell snippets with own `packages`; callable directly in `enterShell`/`tasks` |
 | **Env / Basics** | `env.*`, `enterShell` | `https://devenv.sh/basics/` | `env.LD_LIBRARY_PATH`, `env.DATABASE_URL`, `CARGO_TARGET_DIR=/tmp/frt-build` when path has spaces |
-| **Tasks (DAG)** | `tasks."ns:name".exec/before/after` | `https://devenv.sh/tasks/` | DAG via `before`/`after`, suffix `@ready`/`@completed`, `devenv:enterShell` + `devenv:enterTest` lifecycle, `devenv tasks run` |
+| **Tasks (DAG)** | `tasks."ns:name".exec/before/after` | `https://devenv.sh/tasks/` | DAG via `before`/`after` for `processes` readiness (`after = ["devenv:processes:db@ready"]`) and `devenv:enterShell`/`devenv:enterTest` lifecycle — **avoid `after` for leaf check tasks** (turns `fmt` into `build+clippy+fmt`, hits LLM timeout + `Blocking waiting for file lock` on shared `CARGO_TARGET_DIR`). Prefer independent leaves; chain only in a single CI `exec` if needed. `devenv tasks run` streams task output, but caller needs `2>&1` to surface `cargo` stderr (see §4). |
 | **Processes** | `processes.<name>.exec` | `https://devenv.sh/processes/` | Native manager, supervision, readiness probes, socket activation, `after = ["devenv:processes:db@ready"]`, `devenv up [-d]` |
 | **Services** | `services.<name>.enable` | `https://devenv.sh/services/` | 42 prebuilt services over processes: `services.postgres.enable`, `services.redis.enable`, `initialDatabases` |
 | **Git Hooks** | `git-hooks.hooks.<name>` | `https://devenv.sh/git-hooks/` | Via `git-hooks.nix`; `clippy`, `rustfmt`, `cargo-check`; custom `entry`; default runner `pkgs.prek`; `git-hooks.hooks.clippy.settings.allFeatures = true` |
@@ -102,45 +101,71 @@ inputs:
 
 ## 4. Tasks — Starlark-like DAG
 
-> **Rule — prefer tasks over raw commands:** When a crate has `devenv.nix` with `tasks`, always run `devenv tasks run <task>` (e.g. `devenv tasks run lele:verify`, `devenv tasks run lele:nextest`) instead of invoking the task's underlying command by hand (`cargo clippy`, `cargo nextest run`, `cargo fmt`, `bacon clippy`, …). Read `devenv.nix` first to discover the canonical task; raw `cargo …` is the fallback only when `devenv.nix` is absent.
+> **Rule — prefer tasks over raw commands:** When a crate has `devenv.nix` with `tasks`, always run `devenv tasks run <task> 2>&1` (e.g. `devenv tasks run lele:clippy 2>&1`, `devenv tasks run lele:nextest 2>&1`) instead of invoking the task's underlying command by hand (`cargo clippy`, `cargo nextest run`, `cargo fmt`, …). `devenv tasks run` streams the task's output as it runs, but `cargo` writes to stderr — the caller must add `2>&1` (documented caller-side, not inlined in `exec`) so the LLM/tool sees the full stream. Read `devenv.nix` first to discover the canonical task; raw `cargo …` is the fallback only when `devenv.nix` is absent. Tasks should be independent leaves; `after` is for `processes` readiness, not for chaining leaf checks.
 
 ```nix
 # https://devenv.sh/tasks/
 tasks = {
-  "myapp:setup".exec = "cargo build --all-targets";
-  "myapp:check".exec = "cargo clippy -- -D warnings && cargo fmt -- --check";
-  "myapp:test".exec = "cargo nextest run --all-targets";
-  "lele:verify".exec = ''
-    cargo build --all-targets
-    cargo clippy -- -D warnings
-    cargo fmt -- --check
-    cargo nextest run --all-targets
-    bacon --headless clippy -- -- -D warnings
-    cargo run --manifest-path ../lele_lint/Cargo.toml
-  '';
-  "lele:nextest".exec = "cargo nextest run --all-targets";
-  "lele:bacon-clippy".exec = "bacon --headless clippy -- -- -D warnings";
+  "lele:build".exec = "cargo build --all-targets --features dev";
+  "lele:clippy".exec = "cargo clippy --all-targets --features dev -- -D warnings";
+  "lele:fmt".exec = "cargo fmt -- --check";
+  "lele:nextest".exec = "cargo nextest run --all-targets --features dev";
   "lele:lint".exec = "cargo run --manifest-path ../lele_lint/Cargo.toml";
-  "devenv:enterShell".after = [ "myapp:setup" ];
-  "devenv:enterTest".after = [ "lele:verify" ];
+  "lele:taxonomy_check".exec = "cargo run --manifest-path ../lele_function_taxonomy/Cargo.toml --features rustc-private -- --manifest-path ./Cargo.toml";
+  "freenet:contract-harness".exec = "cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture";
+  # no after, no verify sink — each leaf does one job; use a single CI exec if chaining is needed
 };
 ```
 
-`lele:verify` is the crate-local smoke including `bacon --headless clippy` before `lele_lint` (bacon also available separately via `lele:bacon-clippy`; interactive use is `bacon clippy -- -- -D warnings` without `--headless`). Run `devenv tasks run lele:verify` for the full chain, `devenv tasks run lele:nextest` for nextest only — do not run `cargo nextest run --all-targets` or `cargo clippy -- -D warnings` directly when `devenv tasks run lele:*` exists. Processes are tasks too: `devenv:processes:web-server`. Dependency states: `after = ["devenv:processes:db@ready"]` (default) vs `@completed`. See `https://devenv.sh/tasks/#dependency-states`.
+Leaf tasks are **independent** — `devenv tasks run lele:fmt 2>&1` runs only `cargo fmt` (<1s), not `build+clippy+fmt`. The old `after` chain (`lele:fmt.after=["lele:clippy"].after=["lele:build"]` → `lele:verify` sink, plus `lele:bacon-clippy` via `bacon --headless`) made every leaf pay the full pipeline cost (2-5min, `Blocking waiting for file lock` on shared `CARGO_TARGET_DIR=/tmp/frt-build`, LLM 120s timeout) and is now an anti-pattern — deleted. `bacon` is TUI-only (`bacon clippy` interactive); it has no better clippy output than `cargo clippy` and `bacon --headless` hangs in tasks — do not add it to `packages` for tasks. Single-line `exec = "cargo ..."` streams cleanly; avoid `set -e; echo ">>> ..."; ...; echo "done"` wrappers and duplicate `cargo clippy --tests` (`--all-targets` already covers it). Processes are tasks too: `devenv:processes:web-server`. Dependency states: `after = ["devenv:processes:db@ready"]` (default) vs `@completed`. See `https://devenv.sh/tasks/#dependency-states`.
 
-## 5. Git Hooks — Replaces clippy/fmt in CI
+## 5. Git Hooks — Blocking pre-commit via task composition (freenet_example template)
+
+This is the canonical template — keep the four-hook freenet example. Each hook composes an existing `tasks` leaf (single source of truth, no `cargo` duplication) and blocks unless all checks pass.
 
 ```nix
 # https://devenv.sh/git-hooks/ — requires devenv.yaml git-hooks input
+# freenet_example/devenv.nix — four separate hooks so prek names the failing one
 git-hooks.hooks = {
-  clippy.enable = true;
-  clippy.settings.allFeatures = true;
-  rustfmt.enable = true;
-  cargo-check.enable = true;
+  lele-clippy = {
+    enable = true;
+    name = "clippy (freenet_example)";
+    entry = "bash -c 'cd freenet_example && devenv tasks run lele:clippy 2>&1'";
+    pass_filenames = false;
+    always_run = true;
+  };
+  lele-fmt = {
+    enable = true;
+    name = "fmt (freenet_example)";
+    entry = "bash -c 'cd freenet_example && devenv tasks run lele:fmt 2>&1'";
+    pass_filenames = false;
+    always_run = true;
+  };
+  lele-lint = {
+    enable = true;
+    name = "lele_lint (freenet_example)";
+    entry = "bash -c 'cd freenet_example && devenv tasks run lele:lint 2>&1'";
+    pass_filenames = false;
+    always_run = true;
+  };
+  lele-taxonomy = {
+    enable = true;
+    name = "taxonomy_check (freenet_example)";
+    entry = "bash -c 'cd freenet_example && devenv tasks run lele:taxonomy_check 2>&1'";
+    pass_filenames = false;
+    always_run = true;
+  };
 };
 ```
 
-CI note: when this is enabled, `crate-tag-ci` test gate may run `devenv test` / `devenv tasks run myapp:check` instead of raw `cargo clippy -- -D warnings && cargo fmt -- --check`. Keep raw commands as fallback when `devenv` is not present. Hooks install via `prek` by default; `.pre-commit-config.yaml` is a symlink to the store — do not commit it.
+Rules:
+* **Compose, don’t duplicate** — `entry` calls `devenv tasks run <task> 2>&1` (the leaf `exec = "cargo ..."` stays the single source of truth). Changing the task automatically changes the hook.
+* **`cd <crate> &&` is required** — `.git/hooks/pre-commit` (`prek hook-impl --config=.../freenet_example/.pre-commit-config.yaml`) runs from the repo root (`/projects`). Without `cd freenet_example &&`, `devenv tasks run` fails `File devenv.nix does not exist`.
+* **`always_run = true`, not `types = ["rust"]`** — `types`/`files` with `always_run=false` skips the hook when `devenv.nix` (or any non-`rust` file) is the only staged file (`clippy (no files to check) Skipped`), so a broken `devenv.nix` could be committed. `always_run=true` makes the gate blocking on every `git commit`.
+* **`pass_filenames = false`** — `cargo` ignores filenames; `prek` must not append them.
+* Simple `clippy.enable = true` / `rustfmt.enable = true` still exists for trivial crates, but for `freenet_example` they are wrong: they run `cargo fmt --all` from repo root → `cargo metadata could not find Cargo.toml in /projects`.
+
+Hooks install via `prek` (`devenv shell` regenerates `freenet_example/.pre-commit-config.yaml` symlink + `.git/hooks/pre-commit` wrapper). Do not commit `.pre-commit-config.yaml` or `.pre-commit-config.json` — they are generated. `crate-tag-ci` tag pipeline still uses raw `cargo` as fallback when `devenv` is absent.
 
 ## 6. Processes & Services
 
@@ -199,3 +224,11 @@ Shared devenv at workspace root, per-crate overrides for `targets`, `channel`, e
 - Do not rebuild WASM per user for Freenet — ship canonical `contract.wasm` via `include_bytes!` (see `freenet` skill).
 - When project path has spaces, set `env.CARGO_TARGET_DIR = "/tmp/frt-build"` in devenv.nix or prefix cargo calls.
 - Do not add `#[allow(clippy::pedantic)]` / `#[allow(clippy::nursery)]` (or `Cargo.toml` global `allow` for them) without explicit user approval — see `lele-rs` `#[allow(clippy::…)]` Gate.
+- Do not add `bacon` / `bacon --headless` as a task (`lele:bacon-clippy`) — `bacon` is interactive TUI only (`bacon clippy`), headless hangs; `cargo clippy` already satisfies `-D warnings`.
+- Do not chain leaf tasks with `after` (e.g. `lele:fmt.after=["lele:clippy"]`) — it makes every LLM call pay the full pipeline and hit `Blocking waiting for file lock` / 120s timeout. Keep leaves independent; delete the `lele:verify` sink.
+- Do not duplicate `cargo clippy --tests` when `cargo clippy --all-targets` is used.
+- When calling tasks from an LLM/tool, always add `2>&1` (`devenv tasks run <task> 2>&1`) — `cargo` writes diagnostics to stderr and the tasks stream is caller-side merged; do not inline `2>&1` into `exec`.
+- Do not make blocking hooks with `types = ["rust"]` alone — `always_run=false` skips when only `devenv.nix` etc. is staged (`no files to check` skips gating). Use `always_run = true` for gate hooks.
+- Do not run `devenv tasks run` from a hook without `cd <crate> &&` — hook CWD is repo root, not the crate dir (`File devenv.nix does not exist`).
+- Do not duplicate `cargo` strings in hooks — compose `devenv tasks run <leaf> 2>&1` (single source of truth).
+- Do not rewrite public history with `reset`/`push --force-with-lease` — use forward `revert`/fix commits; force needs explicit user “force” command (per `opencode-git-workflow`).

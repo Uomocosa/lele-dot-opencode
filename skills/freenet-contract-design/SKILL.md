@@ -147,6 +147,139 @@ fully-decentralized, low-state contract.
 | Merged replicas but totals differ by a few ticks | Sample skew: each client's last tick lands within (#instances−1) ticks. Use an absolute tolerance (`#instances + 3`), never a percentage. |
 | Count inflated by client | That's the input-forgery gap (§6). Only an unforgeable source closes it if anti-cheat is required. |
 
+## 9. Universal test suite — every contract must pass
+
+Copy this suite into `contract/src/lib.rs:#[cfg(test)]` (pure unit, no node) plus one
+network-mode integration. Parameterize with two generators the contract must supply:
+
+* `gen_state() -> State` — any valid state (include `empty_state()` / default).
+* `gen_update(&State) -> UpdateData` — a valid delta/state for that base.
+* `decode(&State) -> YourState` for assertions; `params()` / `related()` helpers.
+
+### A — Four-function wiring (reconcile wall: §1, §3)
+
+```rust
+#[test] fn validate_accepts_gen() {
+    assert!(MyContract::validate_state(params(), gen_state(), related()).is_ok());
+}
+#[test] fn validate_rejects_garbage() {
+    for bad in [b"" as &[u8], b"not-bincode", &[0xFF; 32]] {
+        assert!(MyContract::validate_state(
+            params(), State::from(bad.to_vec()), related()
+        ).is_err());
+    }
+}
+#[test] fn summarize_deterministic() {
+    let s = gen_state();
+    let a = MyContract::summarize_state(params(), s.clone()).unwrap();
+    let b = MyContract::summarize_state(params(), s).unwrap();
+    assert_eq!(a.as_ref(), b.as_ref());
+}
+#[test] fn summarize_detects_structural_divergence() {
+    // G-counter nuance (§3): byte-equality anti-entropy. Equal totals with
+    // different shape must have different summaries, else delta never fires.
+    if let Some((a, b)) = gen_divergent_equal_total() {
+        assert_ne!(
+            MyContract::summarize_state(params(), a).unwrap().as_ref(),
+            MyContract::summarize_state(params(), b).unwrap().as_ref()
+        );
+    }
+}
+#[test] fn delta_nonempty_and_roundtrips() {
+    let base = gen_state();
+    let ahead = apply(base.clone(), vec![gen_update(&base)]);
+    let summary = MyContract::summarize_state(params(), base.clone()).unwrap();
+    let delta = MyContract::get_state_delta(params(), ahead.clone(), summary).unwrap();
+    assert!(!delta.as_ref().is_empty() || ahead.as_ref() == base.as_ref(),
+        "empty delta disables anti-entropy (§1)");
+    let merged = MyContract::update_state(
+        params(), base, vec![UpdateData::Delta(delta)]
+    ).unwrap().unwrap_valid();
+    assert_eq!(merged.as_ref(), ahead.as_ref(), "delta must converge peer");
+}
+#[test] fn delta_handles_bad_summary() {
+    let s = gen_state();
+    let bad = StateSummary::from(b"garbage".to_vec());
+    let delta = MyContract::get_state_delta(params(), s.clone(), bad).unwrap();
+    let merged = MyContract::update_state(
+        params(), empty_state(), vec![UpdateData::Delta(delta)]
+    ).unwrap();
+    assert!(merged.is_ok(), "must fallback to whole-state, not panic");
+}
+```
+
+### B — CRDT laws (pure reducer: §0, §2; Broken flag)
+
+```rust
+fn apply(state: State<'static>, datas: Vec<UpdateData<'static>>) -> State<'static> {
+    MyContract::update_state(params(), state, datas).unwrap().unwrap_valid()
+}
+
+#[test] fn update_idempotent() {
+    let s = gen_state(); let d = gen_update(&s);
+    assert_eq!(apply(s.clone(), vec![d.clone()]).as_ref(),
+               apply(s.clone(), vec![d.clone(), d.clone()]).as_ref());
+    assert_eq!(apply(s.clone(), vec![d.clone()]).as_ref(),
+               apply(apply(s.clone(), vec![d.clone()]), vec![d]).as_ref());
+}
+#[test] fn update_commutative() {
+    let s = gen_state(); let a = gen_update(&s); let b = gen_update(&s);
+    assert_eq!(apply(s.clone(), vec![a.clone(), b.clone()]).as_ref(),
+               apply(s.clone(), vec![b, a]).as_ref());
+}
+#[test] fn update_associative() {
+    let s = gen_state(); let a = gen_update(&s); let b = gen_update(&s); let c = gen_update(&s);
+    let ab_c = apply(apply(s.clone(), vec![a.clone(), b.clone()]), vec![c.clone()]);
+    let a_bc = apply(s.clone(), vec![a, b, c]);
+    assert_eq!(ab_c.as_ref(), a_bc.as_ref());
+}
+#[test] fn update_reads_data_not_state_plus1() {
+    // Canonical freenet bug — `state+1` double-counts on replay.
+    let s = gen_state();
+    let d = gen_update(&s);
+    let once = apply(s.clone(), vec![d.clone()]);
+    let twice = apply(s.clone(), vec![d.clone(), d.clone()]);
+    assert_eq!(once.as_ref(), twice.as_ref(),
+        "must be max/union from data (§2), not +1 from state");
+}
+#[test] fn update_empty_and_unknown_noop() {
+    let s = gen_state();
+    assert_eq!(apply(s.clone(), vec![]).as_ref(), s.as_ref());
+    let unk = UpdateData::Related;
+    assert_eq!(apply(s.clone(), vec![unk]).as_ref(), s.as_ref());
+}
+#[test] fn update_rejects_garbage_data_without_panic() {
+    let s = gen_state();
+    let bad = State::from(b"not-state".to_vec());
+    let res = MyContract::update_state(params(), s, vec![UpdateData::State(bad)]);
+    assert!(res.is_ok() || res.is_err(), "must not trap in wasmtime");
+    if let Ok(m) = res { let _ = m.unwrap_valid(); }
+}
+#[test] fn property_crdt_random() {
+    // proptest/quickcheck: contract supplies Arbitrary for State/UpdateData
+    // proptest! { |(s in gen_states(), a in gen_updates(), b in gen_updates())| {
+    //     prop_assert_eq!(apply(s.clone(), vec![a.clone(), b.clone()]),
+    //                    apply(s.clone(), vec![b, a]));
+    // }}
+}
+```
+
+### C — Node liveness (network-mode only; local mode hides Broken)
+
+```rust
+#[tokio::test(flavor = "multi_thread")] async fn not_marked_broken() {
+    // Use freenet skill Pattern B: serve_client_api_with_listener + NodeConfig + run_network_node
+    let node = TestNode::start_network().await;
+    let key = deploy(&node, wasm()).await;
+    for _ in 0..20 { update_count(&node, key, gen_update(&get_state(&node, key).await)).await.unwrap(); }
+    assert!(get_count(&node, key).await.is_ok(), "Broken flag persists in DB (§8)");
+}
+```
+
+Opt-in (not universal): scale/O(participants), cross-tag forgery, `+1` rate limit,
+signature/PoW anti-cheat — these trade scale vs anti-cheat per §6 choose-2-of-3 and
+belong in a contract-specific `adversarial.rs` (see `freenet_example` hardening).
+
 ## References
 - `references/reconciliation-and-scaling.md` — the full derivation: pure-reducer model,
   delta/interest flow and the efficiency gate, worked G-counter merges, the scaling proof, the

@@ -218,3 +218,7 @@ Field arity decides struct shape, enforced by `lele_lint`:
 - **`DerefMut`** is optional — only when the type needs mutation through deref (`*counter += 1`).
 - Positional access (`.0`, `.1`) is banned (E009); `Deref` makes it unnecessary.
 
+## 14. Dummy `Default` for Process Handles (clippy `unwrap_used`/`panic`)
+
+When a struct holds a `std::process::Child` (or similar handle that must be spawned), `Default` cannot `spawn().unwrap()` — `Cargo.toml` denies `unwrap_used`/`expect_used`/`panic` (E021). Prefer `Option<Child>` with `Default => None` and handle `Some` at the call site (`if let Some(c)=&mut guard.child { c.kill(); }`), as in `freenet_example/src/testing/terminal_guard.rs:6-19` — dummy `spawn("true").unwrap()` was replaced by `Option` to stay clippy-clean. Only add `#[allow(clippy::unwrap_used)]` with explicit user approval.
+

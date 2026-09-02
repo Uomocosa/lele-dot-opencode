@@ -157,6 +157,10 @@ pub struct AppState {
 ### Contract Unit Tests
 
 Tests live in the same file after the implementation. No separate test directory.
+Every contract must pass the universal suite from `freenet-contract-design:9`
+(CRDT laws, four-function wiring, rejection safety, Broken-flag liveness) —
+parameterize it with `gen_state()` / `gen_update()` for your shape. Minimal
+example:
 
 ```rust
 #[cfg(test)]
@@ -172,6 +176,7 @@ mod tests {
         assert!(result.is_ok());
     }
 }
+// + paste freenet-contract-design §9 suites A/B/C (wiring, CRDT, liveness)
 ```
 
 ### Build Contract
