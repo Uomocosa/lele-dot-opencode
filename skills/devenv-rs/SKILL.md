@@ -176,7 +176,7 @@ Rules:
 * **`pass_filenames = false`** — `cargo` ignores filenames; `prek` must not append them.
 * Simple `clippy.enable = true` / `rustfmt.enable = true` still exists for trivial crates, but for `freenet_example` they are wrong: they run `cargo fmt --all` from repo root → `cargo metadata could not find Cargo.toml in /projects`.
 
-Hooks install via `prek` (`devenv shell` regenerates `freenet_example/.pre-commit-config.yaml` symlink + `.git/hooks/pre-commit` wrapper). Do not commit `.pre-commit-config.yaml` or `.pre-commit-config.json` — they are generated. `crate-tag-ci` tag pipeline still uses raw `cargo` as fallback when `devenv` is absent.
+Hooks install via `prek` (`devenv shell` regenerates `freenet_example/.pre-commit-config.yaml` symlink + `.git/hooks/pre-commit` wrapper). Do not commit `.pre-commit-config.yaml` or `.pre-commit-config.json` — they are generated. **After any `devenv.nix` edit (channel, hooks, `languages.rust.targets`, `tasks`), re-enter `devenv shell`** — without it `prek` keeps the old `.pre-commit-config.yaml` (e.g. 4 vs 5 hooks drift) and `languages.rust.channel="nightly"` / `targets=["wasm32-unknown-unknown"]` are not provisioned via `fenix`; raw `cargo` then needs `rustup target add wasm32-unknown-unknown --toolchain nightly` + `CARGO_TARGET_DIR=/tmp/frt-build` for space-in-path. `crate-tag-ci` tag pipeline still uses raw `cargo` as fallback when `devenv` is absent.
 
 ## 6. Processes & Services
 
@@ -228,7 +228,11 @@ Shared devenv at workspace root, per-crate overrides for `targets`, `channel`, e
 
 `channel = "nightly"` requires `fenix` input (see `devenv.yaml` above). Example: `https://github.com/cachix/devenv/blob/main/examples/rust/devenv.nix`. Without `fenix`, use `channel = "nixpkgs"`.
 
-## 10. Do Not
+## 10. Do Not — NO PIPE (CRITICAL)
+
+**NEVER pipe `devenv tasks run` to `| tail`, `| head`, `| grep`, or any pipe.** Tasks declare `showOutput = true` and stream via bare `devenv tasks run <task> 2>&1`. Piping swallows stdout/stderr; on a fresh `cargo` build (zero stdout lines until `Finished`) `tail` blocks the full 120s timeout with `(no output)` and hides all diagnostics (`cargo` writes to `stderr`). The fix is `showOutput=true` in the task, not `| tail` on the caller.
+
+## 11. Do Not (other)
 
 - Do not run `rustup` inside devenv — toolchain comes from `languages.rust`.
 - Do not commit `.pre-commit-config.yaml` or `.devenv/` to git.

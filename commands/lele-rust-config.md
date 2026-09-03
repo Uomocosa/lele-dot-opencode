@@ -26,7 +26,7 @@ Audit or scaffold a Rust crate toward the `lele-rs` canonical template (`~/.conf
    - `src/` shape: `lib.rs` flattening quick check; run `cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder` if available.
    - Never add `bacon`, never `| tail`/`| head`, always `2>&1`.
 4. If freenet detected (or `--with-freenet`): also audit `languages.rust.targets`, `gccStdenv/clang/glibc`, `C_INCLUDE_PATH`, `freenet:*` tasks, `build.rs` WASM isolation (`contract/target` not `CARGO_TARGET_DIR`).
-5. Report unified diff summary. If `--check`, stop. Else ask to apply; on confirm, patch files (replace `<crate>` placeholder, keep crate identity), then verify: `devenv tasks run lele:clippy 2>&1` (or `cargo clippy -- -D warnings 2>&1` fallback) + `cargo run --manifest-path ../lele_lint/Cargo.toml 2>&1`.
+5. Report unified diff summary. If `--check`, stop. Else ask to apply; on confirm, patch files (replace `<crate>` placeholder, keep crate identity), then **re-enter `devenv shell`** to regenerate `.pre-commit-config.yaml` (hooks) and provision `nightly` + `wasm32-unknown-unknown` via `fenix` (otherwise hooks stay stale — `freenet_example` showed 4 vs 5 hooks until `devenv shell`). Then verify: `devenv tasks run lele:clippy 2>&1` (or `CARGO_TARGET_DIR=/tmp/frt-build cargo clippy -- -D warnings 2>&1` fallback + `rustup target add wasm32-unknown-unknown --toolchain nightly` if not via `devenv`) + `cargo run --manifest-path ../lele_lint/Cargo.toml 2>&1`.
 
 **Steps — Mode 2 Scaffold `create <name>`:**
 
@@ -36,3 +36,5 @@ Audit or scaffold a Rust crate toward the `lele-rs` canonical template (`~/.conf
 4. `git init` if not already in repo, ensure `.gitignore`. Print next steps: `cd <name> && devenv tasks run lele:clippy 2>&1`.
 
 **Safety:** General mode never injects freenet overlay unless detected/forced. Pinned `=version` uses template versions; user bumps via `cargo update` then re-pin.
+
+**CRITICAL — NO PIPE on devenv tasks:** Never `| tail`/`| head`/`| grep` on `devenv tasks run … 2>&1` — tasks use `showOutput=true` and stream; pipes swallow output and `tail` blocks 120s with `(no output)` on fresh `cargo` builds (hides `cargo` stderr). Always bare `devenv tasks run <task> 2>&1`.

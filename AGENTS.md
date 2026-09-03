@@ -75,6 +75,10 @@ Past important conversation summaries are saved repo-wide in `projects/.opencode
 
 **NEVER stage, commit, push, merge, rebase, or amend anything without an explicit command from the user.** An "explicit command" means a direct statement like "commit", "stage that file", "push to origin", or "merge the PR". Implied intent, "go ahead", or silence does NOT count. When in doubt, ask. This rule overrides all other instructions in this file.
 
+## CRITICAL: Devenv Tasks — NO PIPE
+
+**NEVER pipe `devenv tasks run` to `| tail`, `| head`, `| grep`, or any pipe.** Tasks use `showOutput = true` and stream correctly via bare `devenv tasks run <task> 2>&1`. Pipes swallow output; `tail` on a fresh `cargo` task (zero `stdout` lines until `Finished`) blocks the full 120s timeout with `(no output)` and hides diagnostics (`cargo` writes to `stderr`, caller must add `2>&1`). Always use bare `devenv tasks run <task> 2>&1` — never `| tail`/`| head`.
+
 ## CRITICAL: Git Hooks
 
 **If any git hook fails (pre-commit, pre-push, commit-msg, etc.), STOP immediately.** Do not retry, amend, or bypass the failure. Inspect the hook output, identify the root cause, and **propose a concrete solution** for the failure before proceeding. **NEVER run with `--no-verify` / `-n` (or `SKIP=*`) to bypass hooks unless explicitly prompted to do so by the user.** Bypassing is only allowed on direct user instruction, and must be confirmed.

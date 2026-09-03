@@ -56,6 +56,8 @@ When `devenv-rs` is in use, prefer `devenv` tasks/git-hooks over raw cargo invoc
 
 Path with spaces (e.g. `[AAI] Agentic AI`) — prepend `CARGO_TARGET_DIR=/tmp/frt-build` to all cargo commands; devenv sets this via `env.CARGO_TARGET_DIR` if needed.
 
+> **CRITICAL — NO PIPE:** `devenv tasks run <task> 2>&1` must **never** be piped to `| tail`/`| head`/`| grep`. `showOutput=true` streams correctly; pipes swallow output and hide diagnostics, `tail` hangs 120s on fresh builds with `(no output)`.
+
 ## `#[allow(clippy::…)]` Gate — IMPORTANT — REALLY IMPORTANT
 
 **No agent may add `#[allow(clippy::…)]` / `#![allow(clippy::…)]` for `clippy::pedantic` + `clippy::nursery` on its own.**
@@ -93,5 +95,7 @@ Rationale: `E021` forces `pedantic=deny` + `nursery=deny`; per-site `allow` defe
 ## Per-Crate devenv.nix — Always Read First
 
 Before any `cargo build` / `cargo clippy` / `cargo nextest run` / `cargo run --manifest-path ../lele_lint/Cargo.toml` on a crate, read `<crate>/devenv.nix` (and `devenv.yaml` / `devenv.lock` if present). `tasks."lele:*"` there are the crate's canonical examples (`lele:build`, `lele:clippy`, `lele:fmt`, `lele:nextest`, `lele:lint`, `lele:taxonomy_check` in `lele_lint:15-26`). **If `devenv.nix` defines tasks, you MUST run `devenv tasks run <task> 2>&1` — NEVER run the underlying `cargo …` by hand; NEVER pipe to `| tail`/`| head`; always append `2>&1`**; fall back to raw `cargo nextest run --all-targets 2>&1` / `cargo clippy -- -D warnings 2>&1` only if `devenv.nix` is absent. **Agents NEVER run `bacon` — it is USER-ONLY.**
+
+After editing `devenv.nix` (channel, hooks, `languages.rust.targets`, `tasks`), **re-enter `devenv shell`** to regenerate `.pre-commit-config.yaml` and provision `nightly` + `wasm32-unknown-unknown` via `fenix` — otherwise hooks stay stale (e.g. `freenet_example` drifted 4 vs 5 hooks until `devenv shell`) and raw `cargo` needs `rustup target add wasm32-unknown-unknown --toolchain nightly` + `CARGO_TARGET_DIR=/tmp/frt-build` for space-in-path.
 
 `devenv-rs` owns the per-crate `devenv.nix` engine; this skill owns the canonical content. Every Rust crate may have its own `devenv.nix` + `devenv.yaml` at the crate root; shared base can be imported via `imports = [ ../devenv.nix ]`. See `devenv-rs` for the template and composable/polyrepo pattern.
