@@ -548,6 +548,70 @@ impl DelegateInterface for MyDelegate {
 | `unexpected response: SubscribeResponse` when doing Get+Subscribe | When the contract already exists on the network, the node sends `SubscribeResponse` before `GetResponse`. A single `match` on the first response fails. | Loop on recv in `recv_after_get`, `continue` on `SubscribeResponse` until `GetResponse` or `NotFound` arrives |
 | Two gateway nodes on the same machine can't establish P2P | Freenet uses random UDP ports for transport; `public_port` is metadata for `PeerId`, not the actual listen port. NAT-traversal hole punching fails on loopback. | Use separate machines with routable IPs for P2P testing, or Freenet's `turmoil` simulation framework. For CI, use subprocess-based tests that join the real network via public gateways. |
 
+## Freenet Devenv Overlay (on top of lele-rs GENERAL)
+
+When `contract/Cargo.toml` or `dependencies.freenet` is present, overlay these on the `lele-rs/references/lele-rust-config` template. They are **freenet-specific** and must NOT be added to plain Rust crates.
+
+### devenv.nix additions
+
+```nix
+{ pkgs, lib, config, inputs, ... }: {
+  stdenv = pkgs.gccStdenv;
+
+  languages.rust.targets = [ "wasm32-unknown-unknown" ];
+
+  packages = with pkgs; [
+    clang
+    pkg-config
+    gnumake
+    glibc.dev
+    linuxHeaders
+    # GUI/e2e only — drop if headless
+    (if pkgs ? ffmpeg-full then pkgs.ffmpeg-full else ffmpeg)
+    xorg.xdpyinfo
+    xterm
+    wmctrl
+    xdotool
+  ];
+
+  env.C_INCLUDE_PATH = "${pkgs.glibc.dev}/include:${pkgs.linuxHeaders}/include";
+  env.CFLAGS = "-I${pkgs.glibc.dev}/include -Wno-error";
+  env.CPPFLAGS = "-I${pkgs.glibc.dev}/include -Wno-error";
+  # env.CARGO_TARGET_DIR = "/tmp/frt-build" already in general template
+
+  tasks = {
+    # general lele:* tasks (build/clippy/fmt/nextest/lint/taxonomy_check) stay unchanged
+    "freenet:contract-harness" = { exec = "cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture"; showOutput = true; };
+    # add more freenet:* tasks only if needed
+  };
+
+  # extend git-hooks with freenet:contract-harness (task-composed, same pattern)
+}
+```
+
+**Source:** `freenet_example/devenv.nix:2-26,37` — `gccStdenv` + clang/glibc + wasm target + `C_INCLUDE_PATH` fixes `tikv-jemalloc-sys` configure (fails on spaces); ffmpeg/xorg only for `xterm` recording.
+
+### build.rs WASM isolation
+
+Do NOT reuse `CARGO_TARGET_DIR` for WASM. Isolate via `contract/target`:
+
+```rust
+// build.rs — DO NOT use CARGO_TARGET_DIR for wasm
+let wasm_target_dir = "contract/target".to_string();
+build_contract("contract/Cargo.toml", "contract.wasm", &wasm_target_dir, out);
+```
+
+Full pattern with `needs_build` mtime guard + `cargo:rerun-if-changed` in `freenet_example/build.rs:8-84`. Host `cargo` holding `/tmp/frt-build/.cargo-lock` while `build.rs` spawns inner `cargo --target-dir /tmp/frt-build` self-deadlocks (`Blocking waiting for file lock`) — hidden until `contract/src/lib.rs` is touched.
+
+### Contract artefacts
+
+* Commit canonical `contract/*.wasm` via `include_bytes!` — rebuild changes `CodeHash = Blake3(wasm_bytes)` ⇒ new `ContractKey`, different room. Never rebuild per deployment.
+* Keep `contract/Cargo.toml` pins aligned with `freenet` version (`freenet = "=0.2.132"` …).
+
+### When to apply
+
+`/lele-rust-config` auto-detects `contract/Cargo.toml` or `dependencies.freenet` and loads this overlay; `--with-freenet` forces it. Plain crates stay minimal.
+
 ## Reference
 
 - [Freenet Documentation](https://freenet.org/build/manual/)

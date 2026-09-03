@@ -190,9 +190,9 @@ cargo build --all-targets
 cargo clippy -- -D warnings
 cargo fmt -- --check
 cargo nextest run --all-targets
-bacon clippy -- -- -D warnings
 cargo run --manifest-path ../lele_lint/Cargo.toml
 ```
+Via devenv (per-crate `devenv.nix`): `devenv tasks run lele:clippy 2>&1` etc. **Agents NEVER run `bacon` — `bacon clippy` is USER-ONLY (TUI).** `bacon clippy -- -- -D warnings` is the user's interactive tool only.
 
 ## 11. Import Style
 | What | Style | Example |

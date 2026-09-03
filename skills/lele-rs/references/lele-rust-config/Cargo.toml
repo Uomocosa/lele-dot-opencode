@@ -1,0 +1,40 @@
+# GENERAL lele-rs template — for freenet, see freenet skill overlay
+[package]
+name = "<crate>"
+version = "0.1.0"
+edition = "2024"
+description = "Lele-rs crate — see lele-rs/references/lele-rust-config"
+license = "MIT OR Apache-2.0"
+
+# Optional MSRV floor (nightly satisfies it, stable users see clear minimum)
+# rust-version = "1.85"
+
+[lints.rust]
+non_snake_case = "allow"
+
+[lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+arithmetic_side_effects = "deny"
+unreachable = "deny"
+unimplemented = "deny"
+unchecked_time_subtraction = "deny"
+todo = "deny"
+string_slice = "deny"
+panic_in_result_fn = "deny"
+panic = "deny"
+exit = "deny"
+as_conversions = "deny"
+
+[dependencies]
+# pinned for reproducibility — bump via `cargo update` then re-pin `=` versions
+thiserror = "=2.0.18"
+derive_more = { version = "=2.1.1", features = ["deref", "deref_mut"] }
+tracing = "=0.1.44"
+serde = { version = "=1.0.228", features = ["derive"] }
+
+[dev-dependencies]
+# nextest is a devenv package, not a cargo dep

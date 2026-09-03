@@ -66,8 +66,7 @@ cargo build --all-targets
 cargo clippy -- -D warnings
 cargo fmt -- --check
 cargo nextest run --all-targets
-bacon clippy -- -- -D warnings
 cargo run --manifest-path ../lele_lint/Cargo.toml
 ```
 
-At the end of every non-trivial change, `bacon clippy` runs before `lele_lint`; `nextest` is the test step before that.
+At the end of every non-trivial change, `cargo clippy -- -D warnings` (via `devenv tasks run lele:clippy 2>&1`) runs before `lele_lint`; `nextest` is the test step before that. **Agents NEVER run `bacon` — it is USER-ONLY.**

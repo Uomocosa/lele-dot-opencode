@@ -22,7 +22,7 @@ devenv update        # pin devenv.yaml -> devenv.lock
 
 ## 2. Per-Crate Example Config (template — copy to each crate root)
 
-Per-crate `devenv.nix` is the source of truth; `devenv.yaml` pins inputs. Example lives per crate (e.g. `freenet_libp2p_bevy_example_1/devenv.nix`). Shared base may be imported.
+Per-crate `devenv.nix` is the source of truth; `devenv.yaml` pins inputs. **Canonical general template is `lele-rs/references/lele-rust-config/`** (nightly, pinned `=version` deps, 6 `lele:*` tasks, `rust-toolchain.toml`); `freenet_example/devenv.nix` is the freenet overlay example (wasm targets, `gccStdenv`, `C_INCLUDE_PATH`). See `lele-rs: Lele Rust Config` for which to use. Minimal example lives per crate (e.g. `lele_lint/devenv.nix`). Shared base may be imported.
 
 ```nix
 # devenv.nix — https://devenv.sh/getting-started/ + https://devenv.sh/reference/options/

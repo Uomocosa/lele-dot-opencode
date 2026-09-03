@@ -198,28 +198,27 @@ cargo build --all-targets
 cargo clippy -- -D warnings
 cargo fmt -- --check
 cargo nextest run --all-targets
-bacon clippy -- -- -D warnings
 cargo run --manifest-path ../lele_lint/Cargo.toml
 ```
 
-Via devenv (per-crate `devenv.nix` with `packages = [ cargo-nextest bacon ]`):
+Via devenv (per-crate `devenv.nix`):
 
 ```
-devenv shell -- cargo build --all-targets
-devenv shell -- cargo clippy -- -D warnings
-devenv shell -- cargo fmt -- --check
-devenv shell -- cargo nextest run --all-targets
-devenv shell -- bacon clippy -- -- -D warnings
-cargo run --manifest-path ../lele_lint/Cargo.toml
+devenv shell -- cargo build --all-targets 2>&1
+devenv shell -- cargo clippy -- -D warnings 2>&1
+devenv shell -- cargo fmt -- --check 2>&1
+devenv shell -- cargo nextest run --all-targets 2>&1
+cargo run --manifest-path ../lele_lint/Cargo.toml 2>&1
 ```
 
 Via tasks (per-crate):
 
 ```
-devenv tasks run lele:verify       # build+clippy+fmt+nextest+lint (without bacon)
-devenv tasks run lele:bacon-clippy # bacon separately (requires TTY)
-devenv tasks run lele:nextest
-devenv tasks run lele:lint
+devenv tasks run lele:build 2>&1
+devenv tasks run lele:clippy 2>&1
+devenv tasks run lele:fmt 2>&1
+devenv tasks run lele:nextest 2>&1
+devenv tasks run lele:lint 2>&1
 ```
 
-Always run after making changes. At the end of every non-trivial change run `bacon clippy` before `lele_lint`; fix `clippy -D warnings` first, then lint violations. Test both direct and `devenv shell --` invocations when devenv is present.
+Always run after making changes. At the end of every non-trivial change run `cargo clippy -- -D warnings` via `devenv tasks run lele:clippy 2>&1` before `lele_lint`; fix `clippy -D warnings` first, then lint violations. **Agents NEVER run `bacon` — it is USER-ONLY.** Test both direct and `devenv shell --` invocations when devenv is present. **If `devenv.nix` defines tasks, you MUST use `devenv tasks run <task> 2>&1` — never raw `cargo`; never pipe to `| tail`/`| head`; always append `2>&1`.**
