@@ -48,16 +48,18 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 | E009 | no_positional | No `.0` / `.1` field access. Define structs with named fields. |
 | E010 | no_trivial_accessors | Remove getters/setters that just return a `pub` field. |
 | E011 | domain_import | `use crate::module;` → `module::Type`. Not `use crate::module::Type`. |
-| E012 | thin_delegates | 1-stmt methods require `#[rustfmt::skip]` on impl block. >3 stmt inherent methods must be extracted to `<type>_<method>.rs`. Trait impls with >3 stmts are skipped. |
+| E012 | atomic_delegates | 1-stmt methods require `#[rustfmt::skip]` on impl block. >3 stmt inherent methods must be extracted to `<type>_<method>.rs`. Trait impls with >3 stmts are skipped. |
 | E013 | constructor_no_skip | `impl Default` and constructor methods must NOT use `#[rustfmt::skip]`. |
 | E015 | helper_count | Max 2 unannotated private helpers. Mark each with `// needed helper:` above. |
-| E016 | single_caller_type | Type with 1 caller and 0 thin delegates → define in the caller's file. |
+| E016 | single_caller_type | Type with 1 caller and 0 atomic delegates → define in the caller's file. |
 | E017 | method_file_co_location | `<type>_<method>.rs` must reside in the same directory as `<type>.rs`. |
-| E018 | single_field_newtype | 1 field → tuple newtype `X(T)` with `#[derive(Deref)]`; ≥2 fields → named `{ a, b }`; ≥2-field tuple forbidden. |
+| E018 | single_field_newtype | 1 field → tuple newtype `X(T)` with `#[derive(Deref)]`; ≥2 fields → named `{ a, b }`; ≥2-field tuple forbidden. Exempt: structs deriving `Serialize`/`Deserialize`/`Parser`/`Args`/`Subcommand`/`ValueEnum` (wire-shape derives). |
 | E019 | mod_rs_purity | `mod.rs` may only declare `mod`/`pub mod` + `pub use`; no private `use`, impls, fns, or `#[cfg(test)]` modules. |
 | E020 | no_crate_paths | `crate::` may only appear inside `use` items (e.g. `use crate::module;`); any `crate::` in expression/type/signature position outside `lib.rs`/`main.rs` is an error. |
 | E021 | clippy_config_cargo | `Cargo.toml` must have `[lints.clippy]` with `pedantic/nursery = {level="deny",priority=-1}` + 13 `deny` lints (minimum). |
 | E022 | clippy_config_clippy | `clippy.toml` must have `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests`, `allow-indexing-slicing-in-tests = true`. |
+| E023 | no_allow_attributes | `#[allow(..)]` and `#[expect(..)]` attributes (outer and inner `#![..]`) are banned. Default on; opt out per crate with `no_allow_attributes = false` in `lele.toml [lele.lint.checkers]`. |
+| E027 | no_stuttered_type | A `pub` type whose snake_case starts with `<parent_dir>_` must drop the prefix (e.g. `freenet::FreenetClient` → `freenet::Client`). Exempt: exact stem==dir matches (`cli::Cli`), short suffixes (<3 chars, e.g. `net_id::NetworkId`), crate-root types. |
 
 ## Per-Code Detail
 
@@ -79,7 +81,7 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 **Triggers when:** A method file (`<type>_<method>.rs`) is declared `pub mod` or re-exported via `pub use` in `mod.rs`.
 
-**Fix:** Change to `mod <type>_<method>;` (private) and remove any `pub use` of it. Method files are consumed exclusively through the struct's thin delegates.
+**Fix:** Change to `mod <type>_<method>;` (private) and remove any `pub use` of it. Method files are consumed exclusively through the struct's atomic delegates.
 
 ### E004 — no_cross_domain_reexport
 
@@ -91,7 +93,7 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 **Triggers when:** A non-exempt file has no `test_usage` function inside a `#[cfg(test)] mod tests` block.
 
-**Exempt:** `main.rs`, `mod.rs`/`lib.rs` (pure module trees), `constants.rs`, `tests/` directories. Struct files with thin delegates may also be exempt.
+**Exempt:** `main.rs`, `mod.rs`/`lib.rs` (pure module trees), `constants.rs`, `tests/` directories. Struct files with atomic delegates may also be exempt.
 
 **Fix:** Add a `test_usage` test or append `// no test_usage necessary` as the file's last non-empty line.
 
@@ -119,7 +121,7 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 **Fix:** Import the module (`use crate::clicker;`) and use `clicker::Config`.
 
-### E012 — thin_delegates
+### E012 — atomic_delegates
 
 **Triggers when:**
 - An impl block has 1-statement methods but no `#[rustfmt::skip]` → add `#[rustfmt::skip]`.
@@ -140,13 +142,13 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 **Triggers when:** A file has more than 2 private, unannotated helper functions. `pub` functions and `impl` methods don't count.
 
-**Fix:** Add `// needed helper:` on the line above each private helper function, or extract reusable helpers into proper thin delegate files.
+**Fix:** Add `// needed helper:` on the line above each private helper function, or extract reusable helpers into proper atomic delegate files.
 
 ### E016 — single_caller_type
 
-**Triggers when:** A type (struct/enum) defined in its own file is referenced by exactly 1 other file, and has no thin delegate methods. A thin delegate method counts as a separate caller (the method file is also a caller).
+**Triggers when:** A type (struct/enum) defined in its own file is referenced by exactly 1 other file, and has no atomic delegate methods. A atomic delegate method counts as a separate caller (the method file is also a caller).
 
-**Fix:** Move the type definition into the caller's file, or add a thin delegate method to justify the separate file.
+**Fix:** Move the type definition into the caller's file, or add a atomic delegate method to justify the separate file.
 
 ### E017 — method_file_co_location
 
@@ -164,6 +166,7 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 **Fix:** 
 - 1 field → `pub struct X(T)` with `#[derive(…, Deref)]` (from `derive_more`). Access via deref (`*x`, method calls); `DerefMut` optional.
 - 2+ fields → named fields `{ a: A, b: B }`. Never use a 2+-field tuple struct.
+- **Exempt:** structs deriving a wire-shape derive (`Serialize`, `Deserialize`, `Parser`, `Args`, `Subcommand`, `ValueEnum`, incl. `serde::`/`clap::`-pathed forms) keep named fields regardless of arity — field names come from the format (TOML keys / CLI flags), so the positional-access rationale doesn't apply.
 
 ### E019 — mod_rs_purity
 
@@ -173,7 +176,7 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 ### E020 — no_crate_paths
 
-**Triggers when:** A `crate::` path appears anywhere other than the path of a `use` item — e.g. `own_id: crate::boxes::PlayerId` in a type position, `crate::foo()` in an expression, a thin delegate dispatching via `crate::module::fn` — in any file that is not the crate root (`lib.rs`/`main.rs`). `pub(crate)` visibilities are exempt.
+**Triggers when:** A `crate::` path appears anywhere other than the path of a `use` item — e.g. `own_id: crate::boxes::PlayerId` in a type position, `crate::foo()` in an expression, a atomic delegate dispatching via `crate::module::fn` — in any file that is not the crate root (`lib.rs`/`main.rs`). `pub(crate)` visibilities are exempt.
 
 **Fix:** Add a top-level `use crate::<module>;` import and reference `<module>::Item` inline, or use a `super::`-relative path for same-domain items. Keep `crate::` out of expression/type/signature positions entirely.
 
@@ -188,6 +191,22 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 **Triggers when:** `clippy.toml` missing at crate root or lacks `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests`, `allow-indexing-slicing-in-tests = true`.
 
 **Fix:** Create `clippy.toml` with the four `true` entries. Extra keys are allowed.
+
+### E023 — no_allow_attributes
+
+**Triggers when:** Any `#[allow(..)]` or `#[expect(..)]` attribute appears — outer (on items, fields, variants, fns) or inner (`#![allow(..)]` at file/module top). String literals containing that text (e.g. test fixtures) are not attributes and don't trigger.
+
+**Fix:** Remove the attribute and fix the underlying lint. There is no in-code suppression — not even `#[expect]`, which would otherwise become the unsanctioned hatch. The only relief is per-crate opt-out: `no_allow_attributes = false` in `lele.toml [lele.lint.checkers]`. Default on.
+
+**Config:** `lele_lint` reads `<crate>/lele.toml` `[lele.lint]` (`checkers` map, same shape as the retired `lele_lint.toml`). Missing file or section → all checkers on.
+
+### E027 — no_stuttered_type
+
+**Triggers when:** A `pub`/`pub(crate)` struct or enum that is its file's E001 primary item has a snake_case name starting with `<parent_dir>_` — e.g. `FreenetClient` in `freenet/freenet_client.rs`, `P2PEvents` in `p2p/p2p_events.rs`.
+
+**Fix:** Strip the directory prefix from the type name (`freenet::FreenetClient` → `freenet::Client`, `p2p::P2PEvents` → `p2p::Events`); the domain import (`use crate::freenet;`) already disambiguates, so the prefix adds no information.
+
+**Exempt:** exact stem==dir matches (`cli::Cli`, `roster::Roster` — nothing to strip, rename manually if desired); stripped suffixes under 3 chars (`net_id::NetworkId` stays); types at the crate root (no parent module); non-`pub` types.
 
 ---
 

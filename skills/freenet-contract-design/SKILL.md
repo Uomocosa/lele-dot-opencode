@@ -276,11 +276,16 @@ fn apply(state: State<'static>, datas: Vec<UpdateData<'static>>) -> State<'stati
 }
 ```
 
-Opt-in (not universal): scale/O(participants), cross-tag forgery, `+1` rate limit,
+Opt-in (not universal): scale/`O(participants)`, cross-key forgery, `+1` rate limit,
 signature/PoW anti-cheat — these trade scale vs anti-cheat per §6 choose-2-of-3 and
-belong in a contract-specific `adversarial.rs` (see `freenet_example` hardening).
+belong in a contract-specific `adversarial.rs` (project-local hardening).
 
 ## References
 - `references/reconciliation-and-scaling.md` — the full derivation: pure-reducer model,
   delta/interest flow and the efficiency gate, worked G-counter merges, the scaling proof, the
   trust split, and the trigger/timestamp/PoW/signed-receipt review.
+- `glossary/` — per-term nomenclature (each with Description, Memory cost, Speed,
+  Pros, Cons, When to use, Vulnerability, Example snippet, Where from / Mapping):
+  `ttl.md`, `tombstone.md`, `lww.md`, `crdt-g-counter.md`, `structural-summary.md`,
+  `delta-empty-delta.md`, `window-cap.md`, `sharding-facade.md`,
+  `allow-list-root-auth.md`, `idempotent.md`, `logical-vs-wall-clock.md`.

@@ -2,6 +2,8 @@
 
 Pinned contract analyses next to `SKILL.md`. Each file documents one official Freenet app's contract(s) against `freenet-contract-design` §0-9 and the four-function wiring.
 
+> Glossary is one level up: `../glossary/` — per-term files (`ttl.md`, `tombstone.md`, `lww.md`, `crdt-g-counter.md`, `structural-summary.md`, `delta-empty-delta.md`, `window-cap.md`, `sharding-facade.md`, `allow-list-root-auth.md`, `idempotent.md`, `logical-vs-wall-clock.md`).
+
 ## Files (specific tag pin)
 
 | File | Source | Tag / Head | Status |

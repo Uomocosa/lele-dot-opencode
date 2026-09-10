@@ -1,6 +1,6 @@
 ---
 name: lele-rs
-description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, lele-lint-rs, devenv-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, thin delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible devenv environments.
+description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, lele-lint-rs, devenv-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible devenv environments.
 ---
 
 # lele-rs — Rust Stack Indexer (ALWAYS LOADED)
@@ -71,26 +71,17 @@ If `cargo clippy -- -D warnings` surfaces a `clippy::pedantic` or `clippy::nurse
 
 Rationale: `E021` forces `pedantic=deny` + `nursery=deny`; per-site `allow` defeats the deny. Only the user decides which pedantic/nursery lints are noise for this workspace. This gate also applies to file-level `#![allow]` and `Cargo.toml` global `allow` overrides — both need explicit user approval.
 
-## Lele Rust Config — Canonical Crate Template (GENERAL)
+## Lele Config Enforcement
 
-**Template lives at `~/.config/opencode/skills/lele-rs/references/lele-rust-config/` — copy to any crate root, replacing `<crate>` with the crate name. Invoke `/lele-rust-config` to audit/fix or scaffold.**
+Configs are enforced by `lele_enforce_config`. From repo root run:
 
-**Nightly + pinned:** `languages.rust.channel = "nightly"` (via `fenix`, required for `lele:taxonomy_check` with `rustc-private`), `rust-toolchain.toml` mirrors it for non-devenv fallback, `Cargo.toml` pins every direct dep with `=version` (e.g. `thiserror = "=2.0.18"`, `derive_more = "=2.1.1"` — bump via `cargo update` then re-pin). `edition = "2024"` always.
+```
+cargo run -p lele_enforce_config 2>&1
+# or once root devenv.nix is active:
+devenv tasks run lele:enforce-config 2>&1
+```
 
-| File | What it provides |
-|------|-----------------|
-| `Cargo.toml` | `edition 2024`, full `[lints.clippy]` E021 (pedantic+nursery deny + 13 denies), pinned `=version` deps |
-| `clippy.toml` | E022 4× `true` (`allow-unwrap/expect/panic/indexing-in-tests`) |
-| `devenv.nix` | nightly + `cargo-nextest`, `env.CARGO_TARGET_DIR`, 6 tasks `lele:build/clippy/fmt/nextest/lint/taxonomy_check` (`showOutput=true`), 4 git-hooks (task-composed `cd <crate> && devenv tasks run lele:* 2>&1`, `always_run`) |
-| `devenv.yaml` | `nixpkgs` + `git-hooks` + `fenix` + `rust-overlay` |
-| `rust-toolchain.toml` | nightly pin |
-| `lele.toml` | `honesty` defaults (taxonomy) |
-| `src/lib.rs`+`src/hello.rs` | minimal `Deref` newtype demo + `test_usage` |
-| `.gitignore` | `.devenv/`, `target/`, `contract/target/` |
-
-**Freenet overlay is NOT part of this template** — when `contract/Cargo.toml` or `dependencies.freenet` is present, overlay `freenet` skill on top (WASM targets, `gccStdenv`/clang/glibc `C_INCLUDE_PATH`, `contract:target` isolation, `freenet:*` tasks, `build.rs` contract builder). See `freenet: Freenet Devenv Overlay`.
-
-**Command:** `/lele-rust-config [crate-path] [--check]` audits and patches toward this template; `/lele-rust-config create <name>` scaffolds from it.
+It lists crates under the folder (excludes workspaces and dirs in `lele.toml [lele.config] exclude`), and for each with `devenv.nix` checks that default `lele:*` tasks/hooks exist (existence-only); if the crate is a freenet crate (`Cargo.toml` has a `freenet`-named dependency or `contract/Cargo.toml` exists) also requires `freenet:contract-harness`, `freenet:run-local-mainnet`, `freenet:run-cross-os`. **No auto-fix** — each warning/error blocks `git commit` and prints a `hint:` line with the canonical snippet to add manually, then re-run `devenv shell` if `devenv.nix`/`devenv.yaml` changed. The canonical template remains at `~/.config/opencode/skills/lele-rs/references/lele-rust-config/` for copying; freenet overlay is described in `freenet` skill.
 
 ## Per-Crate devenv.nix — Always Read First
 

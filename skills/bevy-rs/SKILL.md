@@ -23,11 +23,11 @@ Bevy engine patterns for Rust projects that depend on `bevy`. This skill may ove
 
 ### Plugin Struct + Delegate Separation
 
-Separate the Plugin struct definition from its `impl Plugin for ...` trait implementation. Both files live in the domain folder. The thin delegate calls a private sibling method file:
+Separate the Plugin struct definition from its `impl Plugin for ...` trait implementation. Both files live in the domain folder. The atomic delegate calls a private sibling method file:
 
 ```
 {{module}}/
-  plugin.rs                    # struct Plugin + Default + thin delegates
+  plugin.rs                    # struct Plugin + Default + atomic delegates
   plugin_build.rs              # fn build(plugin, app) + test_usage  (PRIVATE module)
 ```
 
@@ -45,8 +45,8 @@ impl bevy::prelude::Plugin for Plugin {
 ```
 
 - The method file is `{{module}}/plugin_build.rs` — `<struct>_<method>.rs` naming.
-- The thin delegate `impl Plugin for ...` block MUST be annotated with `#[rustfmt::skip]`.
-- `plugin_build` is a PRIVATE module (`mod` in mod.rs) — only callable through the thin delegate.
+- The atomic delegate `impl Plugin for ...` block MUST be annotated with `#[rustfmt::skip]`.
+- `plugin_build` is a PRIVATE module (`mod` in mod.rs) — only callable through the atomic delegate.
 
 ### Component, Resource, and Event Types
 
@@ -243,12 +243,12 @@ src/
   lib.rs                         # pub mod {{module}}; + crate-level re-exports
   {{module}}/                    # domain folder
     mod.rs
-    plugin.rs                    # struct Plugin + Default + thin delegates
+    plugin.rs                    # struct Plugin + Default + atomic delegates
     plugin_build.rs              # fn build + test_usage  (PRIVATE)
-    config.rs                    # struct Config + Default + thin delegates
+    config.rs                    # struct Config + Default + atomic delegates
     config_new.rs                # fn new + test_usage  (PRIVATE)
     config_coop.rs               # fn coop + test_usage  (PRIVATE)
-    peer_state.rs                # #[derive(Resource)] struct PeerState + thin delegates
+    peer_state.rs                # #[derive(Resource)] struct PeerState + atomic delegates
     peer_state_accept_peer.rs    # method  (PRIVATE)
     click_counter.rs             # #[derive(Component)] struct ClickCounter
     event.rs                     # #[derive(Message)] enum Event
@@ -292,7 +292,7 @@ use crate::{{module}};
 // {{module}}::bevy_systems::poll_network(...)
 ```
 
-Method files are never imported directly — they are called exclusively through the struct's thin delegates.
+Method files are never imported directly — they are called exclusively through the struct's atomic delegates.
 
 ## 7. System Placement
 

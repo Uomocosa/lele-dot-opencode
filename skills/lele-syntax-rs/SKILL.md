@@ -44,7 +44,7 @@ src/
   lib.rs                         # pub mod {{module}}; + crate-level re-exports
   {{module}}/                    # domain folder
     mod.rs
-    {{type}}.rs                  # struct definition + Default + thin delegates
+    {{type}}.rs                  # struct definition + Default + atomic delegates
     {{type}}_{{function}}.rs     # method free function + test_usage  (PRIVATE module)
     {{name}}.rs                  # pure enum / error type / message struct
     {{function}}.rs              # system function or domain-level free function  (PUBLIC)
@@ -53,9 +53,9 @@ src/
 
 ### Struct File (`{{module}}/{{type}}.rs`)
 Contains struct definition, `impl Default` (real body), associated constants (real bodies),
-plus ALL other `impl` blocks as **thin delegates** calling sibling method files.
+plus ALL other `impl` blocks as **atomic delegates** calling sibling method files.
 
-Layout order: struct def → associated constants → `impl Default` → thin delegate `impl` blocks.
+Layout order: struct def → associated constants → `impl Default` → atomic delegate `impl` blocks.
 
 ```rust
 // {{module}}/config.rs
@@ -79,7 +79,7 @@ impl Config {
 ### Method File (`{{module}}/{{type}}_{{function}}.rs`)
 Contains a single free function matching the method name. The module is **PRIVATE**
 (`mod` not `pub mod` in `mod.rs`). Method files are consumed exclusively through
-the struct's thin delegates.
+the struct's atomic delegates.
 
 ```rust
 // {{module}}/config_new.rs
@@ -99,7 +99,7 @@ mod tests {
 }
 ```
 
-**Thin delegate dispatch:** The struct file imports `use super::config_new;` and the
+**Atomic delegate dispatch:** The struct file imports `use super::config_new;` and the
 delegate method calls `config_new::new()` — convention: 2-segment `super::` dispatch, no crate paths.
 
 **Delegation call rule:** When a method file needs to call another method of the same
@@ -175,7 +175,7 @@ Tests live in the same file as the primary item (no separate `tests/` directorie
 Every non-trivial file must contain a `test_usage` test. Add `// no test_usage necessary`
 to opt out. Exemptions:
 - **Type-only definitions:** Pure struct/enum with zero impl blocks beyond `Default`.
-- **Thin-delegate struct files:** If `impl Default` is the only non-delegate impl block.
+- **Atomic-delegate struct files:** If `impl Default` is the only non-delegate impl block.
 - **`constants.rs`** and pure `mod.rs` files.
 
 ## 9. Code Style
@@ -201,7 +201,7 @@ Via devenv (per-crate `devenv.nix`): `devenv tasks run lele:clippy 2>&1` etc. **
 | Method file (in struct file) | `super::` | `use super::config_new;` |
 | External crate types | Direct | `use bevy::prelude::*;` |
 
-Thin delegates in struct files dispatch via `use super::{{type}}_{{function}};` → `{{type}}_{{function}}::{{function}}(self, ...)`. Convention: 2-segment `super::` path.
+Atomic delegates in struct files dispatch via `use super::{{type}}_{{function}};` → `{{type}}_{{function}}::{{function}}(self, ...)`. Convention: 2-segment `super::` path.
 
 **`crate::` placement (E020):** `crate::` may only appear inside `use` items (e.g. `use crate::clicker;`), never inline in expression/type/signature positions — outside the crate root (`lib.rs`/`main.rs`) it is an E020 error. Cross-domain references go through a top-level `use crate::<module>;` import, not inline `crate::` paths.
 

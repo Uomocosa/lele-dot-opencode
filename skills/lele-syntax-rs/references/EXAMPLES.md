@@ -9,7 +9,7 @@ src/
   lib.rs                    # pub mod p2p; + re-exports
   p2p/
     mod.rs                  # module tree + public re-exports
-    config.rs               # struct Config + Default + thin delegates
+    config.rs               # struct Config + Default + atomic delegates
     config_new.rs           # fn new() -> Config + test_usage  (PRIVATE)
     config_coop.rs          # fn coop() -> Config + test_usage  (PRIVATE)
     config_with_timeout.rs  # fn with_timeout(cfg, ms) -> Config + test_usage  (PRIVATE)
@@ -194,4 +194,4 @@ pub use config::Config;
 
 Consumer path: `use crate::p2p::config::Config;`
 
-The struct file's thin delegates use the same `use super::*;` pattern relative to the `config/` folder. Method filenames keep the `<struct>_<method>.rs` convention inside the subfolder.
+The struct file's atomic delegates use the same `use super::*;` pattern relative to the `config/` folder. Method filenames keep the `<struct>_<method>.rs` convention inside the subfolder.
