@@ -82,3 +82,10 @@ Past important conversation summaries are saved repo-wide in `projects/.opencode
 ## CRITICAL: Git Hooks
 
 **If any git hook fails (pre-commit, pre-push, commit-msg, etc.), STOP immediately.** Do not retry, amend, or bypass the failure. Inspect the hook output, identify the root cause, and **propose a concrete solution** for the failure before proceeding. **NEVER run with `--no-verify` / `-n` (or `SKIP=*`) to bypass hooks unless explicitly prompted to do so by the user.** Bypassing is only allowed on direct user instruction, and must be confirmed.
+
+## IMPORTANT: Code Snippets
+
+When proposing code, answering how-to, or referencing existing code, ALWAYS include concrete code snippets with `file_path:line_number`.
+- Include fenced snippet with language tag, not prose alone.
+- Keep it minimal and copy-pasteable; show before/after when editing.
+- Reference source as `path/to/file.rs:123` to allow navigation.
