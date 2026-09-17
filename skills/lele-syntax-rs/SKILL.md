@@ -47,7 +47,9 @@ src/
     {{type}}.rs                  # struct definition + Default + atomic delegates
     {{type}}_{{function}}.rs     # method free function + test_usage  (PRIVATE module)
     {{name}}.rs                  # pure enum / error type / message struct
-    {{function}}.rs              # system function or domain-level free function  (PUBLIC)
+    {{function}}.rs              # stutter free function (fn snake == stem):
+                                 # private `mod` + `pub use` at root (E024 SHAPE-F),
+                                 # never `pub mod`
     constants.rs                 # grouped module-level constants  (optional)
 ```
 
@@ -149,6 +151,13 @@ pub use player::Player;         // flatten type
 A `mod.rs` may ONLY `pub use` items from its own directory. Cross-domain re-exports
 (`pub use crate::other::Type`) must go in `lib.rs`.
 
+At the crate root (`lib.rs`) the flattening rule splits by file kind (E024):
+struct files → `pub mod {{type}};` + `pub use {{type}}::{{Type}};`;
+stutter fn-files (`{{function}}.rs` holding `pub fn {{function}}`) →
+private `mod {{function}};` + `pub use {{function}}::{{function}};`
+(`pub mod` on a stutter fn-file is an E024 error); method files →
+private `mod` only, never re-exported.
+
 ## 6. `mod.rs` — Module Tree Only
 A `mod.rs` may contain ONLY `pub mod`, `mod`, and `pub use`. No structs, impls,
 functions, constants, or tests.
@@ -175,8 +184,11 @@ Tests live in the same file as the primary item (no separate `tests/` directorie
 Every non-trivial file must contain a `test_usage` test. Add `// no test_usage necessary`
 to opt out. Exemptions:
 - **Type-only definitions:** Pure struct/enum with zero impl blocks beyond `Default`.
-- **Atomic-delegate struct files:** If `impl Default` is the only non-delegate impl block.
 - **`constants.rs`** and pure `mod.rs` files.
+- Struct files with atomic delegates are NOT exempt — they need `test_usage`
+  or the opt-out comment (the `is_atomic_delegate_only` path in the checker
+  is unreachable: `impl Default` trait blocks are skipped before the
+  exemption flag can be set).
 
 ## 9. Code Style
 - **No comments** (code must be self-documenting).

@@ -59,6 +59,8 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 | E021 | clippy_config_cargo | `Cargo.toml` must have `[lints.clippy]` with `pedantic/nursery = {level="deny",priority=-1}` + 13 `deny` lints (minimum). |
 | E022 | clippy_config_clippy | `clippy.toml` must have `allow-unwrap-in-tests`, `allow-expect-in-tests`, `allow-panic-in-tests`, `allow-indexing-slicing-in-tests = true`. |
 | E023 | no_allow_attributes | `#[allow(..)]` and `#[expect(..)]` attributes (outer and inner `#![..]`) are banned. Default on; opt out per crate with `no_allow_attributes = false` in `lele.toml [lele.lint.checkers]`. |
+| E024 | root_reexport | Crate-root flattening: stutter type in `pub mod` file needs `pub use` in `lib.rs`; stutter fn-file needs private `mod` + `pub use`. |
+| E025 | no_stuttered_path | No `module::Type` path where the type repeats a root-file stem — import the type once, use it bare. |
 | E027 | no_stuttered_type | A `pub` type whose snake_case starts with `<parent_dir>_` must drop the prefix (e.g. `freenet::FreenetClient` → `freenet::Client`). Exempt: exact stem==dir matches (`cli::Cli`), short suffixes (<3 chars, e.g. `net_id::NetworkId`), crate-root types. |
 
 ## Per-Code Detail
@@ -93,7 +95,7 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 **Triggers when:** A non-exempt file has no `test_usage` function inside a `#[cfg(test)] mod tests` block.
 
-**Exempt:** `main.rs`, `mod.rs`/`lib.rs` (pure module trees), `constants.rs`, `tests/` directories. Struct files with atomic delegates may also be exempt.
+**Exempt:** `main.rs`, `mod.rs`/`lib.rs` (pure module trees), `constants.rs`, `tests/` directories. Type-only files (struct/enum with no inherent impls beyond `impl Default`) are also exempt. Struct files with atomic delegates are NOT exempt — they need `test_usage` or the opt-out comment.
 
 **Fix:** Add a `test_usage` test or append `// no test_usage necessary` as the file's last non-empty line.
 
@@ -121,6 +123,10 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 
 **Fix:** Import the module (`use crate::clicker;`) and use `clicker::Config`.
 
+**Exception (paired with E025):** the direct stutter import
+`use crate::{stem}::{Type};` (e.g. `use crate::test_log::TestLog;`) is
+allowed — it is the required fix for an E025 hit.
+
 ### E012 — atomic_delegates
 
 **Triggers when:**
@@ -137,6 +143,13 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 **Triggers when:** `#[rustfmt::skip]` on `impl Default` or a constructor impl block (methods named `new`, `from_*`, `with_*`).
 
 **Fix:** Remove `#[rustfmt::skip]` from the impl block. Constructors and `Default` impls carry real bodies and should be wrapped by rustfmt.
+
+**Exempt:** pure atomic-delegate blocks — when every method in the block is a
+1-statement sibling dispatch, the block is skipped by this check even if a
+delegate is named `new` (e.g. `#[rustfmt::skip] impl Config {
+pub fn new() -> Self { config_new::new() } }` satisfies E012 and is exempt
+from E013). Only blocks containing a real (non-delegate) constructor body or
+`impl Default` are flagged.
 
 ### E015 — helper_count
 
@@ -199,6 +212,40 @@ cargo run --manifest-path ../lele_lint/Cargo.toml -- --scan-folder=/src,/contrac
 **Fix:** Remove the attribute and fix the underlying lint. There is no in-code suppression — not even `#[expect]`, which would otherwise become the unsanctioned hatch. The only relief is per-crate opt-out: `no_allow_attributes = false` in `lele.toml [lele.lint.checkers]`. Default on.
 
 **Config:** `lele_lint` reads `<crate>/lele.toml` `[lele.lint]` (`checkers` map, same shape as the retired `lele_lint.toml`). Missing file or section → all checkers on.
+
+### E024 — root_reexport
+
+Two sub-rules, both about `src/*.rs` files at the crate root:
+
+1. **Stutter type:** a `pub` struct/enum/type/alias whose snake_case equals its
+   file stem (e.g. `Guard` in `guard.rs`) in a file declared `pub mod` in
+   `lib.rs` must add `pub use {stem}::{Type};` to `lib.rs`. Files declared
+   private `mod` are skipped by this half of the check.
+2. **SHAPE-F (stutter fn-file):** a file `stem.rs` holding `pub fn stem`
+   (fn snake == stem, e.g. `send_text.rs` holding `pub fn send_text`) must be
+   declared **private** `mod {stem};` in `lib.rs` (never `pub mod`) **plus**
+   `pub use {stem}::{name};`. Method files (`<type>_<method>.rs`, fn name !=
+   stem) need only the private `mod`, no `pub use`.
+
+**Fix:** match the file kind — struct files get `pub mod` + `pub use`;
+stutter fn-files get private `mod` + `pub use`; method files get private
+`mod` only.
+
+### E025 — no_stuttered_path
+
+**Triggers when:** a path contains adjacent `module::Type` segments where
+`module` is a crate-root file stem and the type repeats the module
+(e.g. `test_log::TestLog::open`). `crate::`-rooted and `::`-leading paths
+are ignored here (they belong to E011/E020).
+
+**Fix:** import the type once and use it bare. The sanctioned import is the
+direct stutter form, which E011 explicitly exempts:
+
+```rust
+use crate::test_log::TestLog;
+
+let log = TestLog::open("smoke");
+```
 
 ### E027 — no_stuttered_type
 
