@@ -83,9 +83,10 @@ Past important conversation summaries are saved repo-wide in `projects/.opencode
 
 **If any git hook fails (pre-commit, pre-push, commit-msg, etc.), STOP immediately.** Do not retry, amend, or bypass the failure. Inspect the hook output, identify the root cause, and **propose a concrete solution** for the failure before proceeding. **NEVER run with `--no-verify` / `-n` (or `SKIP=*`) to bypass hooks unless explicitly prompted to do so by the user.** Bypassing is only allowed on direct user instruction, and must be confirmed.
 
-## IMPORTANT: Code Snippets
+## CRITICAL: Code Snippets — ALWAYS SHOW CODE (DEFAULT-ON)
 
-When proposing code, answering how-to, or referencing existing code, ALWAYS include concrete code snippets with `file_path:line_number`.
-- Include fenced snippet with language tag, not prose alone.
-- Keep it minimal and copy-pasteable; show before/after when editing.
-- Reference source as `path/to/file.rs:123` to allow navigation.
+Whenever ANY response discusses code, behavior, structure, or a fix — in MOST conversations — you MUST include a concrete fenced code snippet. Prose alone is a violation.
+- Trigger: mentioning a function, file, type, pattern, bug, fix, plan, or review → show code. Only pure non-code chat (scheduling, opinions with no code referent) is exempt, and then say nothing about code.
+- Format: fenced block with language tag (```rust, ```toml, ```nix, ```bash), minimal and copy-pasteable; before/after when editing or proposing.
+- Grounding: every snippet that refers to existing code MUST cite `path/to/file.rs:line` (from your own `Read`/`Grep`, never from memory). New code: label as `proposed` + target path.
+- No-snippet responses about code are forbidden — if you cannot show code, say what file you would need to read first.
