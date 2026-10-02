@@ -1,6 +1,6 @@
 # Ring & discovery deep-dive (freenet 0.2.101+)
 
-Supplementary detail for `freenet-gateway`. All file:line references are to the pinned
+Supplementary detail for the node-roles/ring section of the `freenet` skill. All file:line references are to the pinned
 `freenet-0.2.101` crate source (`~/.cargo/registry/src/index.crates.io-*/freenet-0.2.101/`).
 
 ## Chord / small-world ring

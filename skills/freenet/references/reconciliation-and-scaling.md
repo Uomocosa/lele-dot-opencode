@@ -1,6 +1,6 @@
 # Reconciliation, Scaling & Trust in Freenet Contracts — Deep Dive
 
-The working out behind the `freenet-contract-design` SKILL.md. Abstract and pattern-only; not
+The working out behind the contract-design gotchas in the `freenet` skill. Abstract and pattern-only; not
 tied to a specific project or version.
 
 ## 1. The contract is a pure reducer

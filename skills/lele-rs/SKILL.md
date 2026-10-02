@@ -1,6 +1,6 @@
 ---
 name: lele-rs
-description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, lele-lint-rs, devenv-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible devenv environments.
+description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, devenv-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible devenv environments.
 ---
 
 # lele-rs — Rust Stack Indexer (ALWAYS LOADED)
@@ -12,17 +12,13 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 | Task | Load |
 |------|------|
 | Rust syntax, file layout, delegates, imports, struct shape | `lele-syntax-rs` |
-| Linter error codes E001-E020, how to fix violations | `lele-lint-rs` |
 | Reproducible dev environment, Nix, languages, packages, tasks, services, hooks | `devenv-rs` |
 | Bevy ECS Plugin/Component/System patterns (bevy 0.19, Rust) | `bevy-rs` |
 | P2P networking SwarmBuilder, transports, stream protocols | `libp2p` |
-| Freenet contracts, delegates, WebSocket clients, node modes | `freenet` |
-| Freenet ring topology, gateways, peer discovery, hermetic meshes | `freenet-gateway` |
-| Freenet contract state/delta/merge design, CRDT, G-counter | `freenet-contract-design` |
+| Freenet contracts, delegates, WebSocket clients, node roles/ring, CRDT state design | `freenet` (+ its `glossary/`, `references/`) |
 | Avian physics determinism caveat, rollback (Rust) | `avian-rs` |
 | Git history, commits, branches, rebase, stash | `opencode-git-workflow` |
 | Crate tag CI (test/build/release tag scheme) | `crate-tag-ci` (project skill `.opencode/skills/crate-tag-ci`) |
-| Cargo nextest test runner, crate-local `cargo nextest run --all-targets` | `cargo-nextest-rs` |
 | Extra iterator adaptors, `Itertools` trait, `iproduct!`/`izip!` | `itertools-rs` |
 | Statistics-driven microbenchmarks, groups, `black_box`, `cargo bench` | `criterion-rs` |
 | Data parallelism, `par_iter`, `join`/`scope`, thread pools | `rayon-rs` |
@@ -34,25 +30,26 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 ## Load Order
 
 1. `lele-rs` (this file) — always.
-2. `lele-syntax-rs` + `lele-lint-rs` — for any `src/` edit.
+2. `lele-syntax-rs` — for any `src/` edit. The linter (`lele_lint`) enforces these rules; fix
+   diagnostics from its `error[E0xx]` messages (run `lele_lint --checker-list` to list checkers).
 3. `devenv-rs` — when touching `devenv.nix`, `devenv.yaml`, packages, services, tasks, or git-hooks.
 4. Domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...) — when the crate depends on that engine/protocol.
 
 ## Global Config Placement
 
 - Global skills live in `~/.config/opencode/skills/<name>/SKILL.md`.
-- Project filtering lives in `projects/opencode.json: permission.skill`. Pattern `*-rs` already allows `lele-rs`, `devenv-rs`, `cargo-nextest-rs`, `itertools-rs`, `criterion-rs`, `rayon-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `bevy-rs`, and `avian-rs`; no explicit allow needed. Bare-name tools (`libp2p`, `freenet`) require exact `allow`.
+- Project filtering lives in `projects/opencode.json: permission.skill`. Pattern `*-rs` already allows `lele-rs`, `devenv-rs`, `itertools-rs`, `criterion-rs`, `rayon-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `bevy-rs`, and `avian-rs`; no explicit allow needed. Bare-name tools (`libp2p`, `freenet`) require exact `allow`.
 - Always-loaded binding is `opencode.json: instructions[]` — add `~/.config/opencode/skills/lele-rs/SKILL.md`, `~/.config/opencode/skills/itertools-rs/SKILL.md`, `~/.config/opencode/skills/criterion-rs/SKILL.md`, `~/.config/opencode/skills/rayon-rs/SKILL.md`, and related `*-rs` skills there. `serde-rs`, `clap-rs`, and `jiff-rs` are on-demand via this leaf table (not autoloaded). See `~/.config/opencode/AGENTS.md: Skill Loading (MUST)`.
-- **Tool-skill auto-load rule:** If any crate in the workspace depends on a tool/crate for which a skill exists (`bevy-rs`, `libp2p`, `freenet`, `freenet-gateway`, `freenet-contract-design`, `avian-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `reqwest-rs`, `criterion-rs`, `rayon-rs`, `itertools-rs`, etc.), add that skill to `opencode.json: instructions[]` so it is always loaded. If no crate uses the tool, keep the skill only as `permission.skill: allow` and load it on demand via the leaf table — do not add to `instructions[]`.
+- **Tool-skill auto-load rule:** If any crate in the workspace depends on a tool/crate for which a skill exists (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, `serde-rs`, `clap-rs`, `jiff-rs`, `reqwest-rs`, `criterion-rs`, `rayon-rs`, `itertools-rs`, etc.), add that skill to `opencode.json: instructions[]` so it is always loaded. If no crate uses the tool, keep the skill only as `permission.skill: allow` and load it on demand via the leaf table — do not add to `instructions[]`.
 
 ## Build Verification (with devenv)
 
 When `devenv-rs` is in use, prefer `devenv` tasks/git-hooks over raw cargo invocations in CI:
 
-- `devenv tasks run` / `devenv test` replaces `cargo clippy -- -D warnings` + `cargo fmt -- --check` via `git-hooks.hooks.clippy` + `rustfmt`.
-- Local equivalent: `cargo build --all-targets && cargo clippy -- -D warnings && cargo fmt -- --check && cargo nextest run --all-targets && cargo run --manifest-path ../lele_lint/Cargo.toml`.
-- With devenv (per-crate): `devenv tasks run lele:build 2>&1`, `devenv tasks run lele:clippy 2>&1`, `devenv tasks run lele:fmt 2>&1`, `devenv tasks run lele:nextest 2>&1`, `devenv tasks run lele:lint 2>&1` — each leaf does one job; `devenv shell -- cargo build --all-targets 2>&1` etc. remain as manual fallbacks — raw `cargo …` is the fallback only when `devenv.nix` is absent. **Agents NEVER run `bacon` — `bacon clippy` is USER-ONLY (TUI).**
-- At the end of every non-trivial code change, run `cargo clippy -- -D warnings` via `devenv tasks run lele:clippy 2>&1` before `lele_lint` (`devenv tasks run lele:lint 2>&1` or `cargo run --manifest-path ../lele_lint/Cargo.toml 2>&1`); fix `clippy -D warnings` first, then lint violations. Agents use `cargo clippy`, never `bacon`.
+- `devenv tasks run` / `devenv test` replaces `cargo clippy --all-targets --all-features -- -D warnings` + `cargo fmt -- --check` via `git-hooks.hooks.clippy` + `rustfmt`.
+- Local equivalent: `cargo build --all-targets --all-features && cargo clippy --all-targets --all-features -- -D warnings && cargo fmt -- --check && cargo nextest run --all-targets --all-features && cargo run --manifest-path ../lele_lint/Cargo.toml`.
+- With devenv (per-crate): `devenv tasks run lele:build 2>&1`, `devenv tasks run lele:clippy 2>&1`, `devenv tasks run lele:fmt 2>&1`, `devenv tasks run lele:nextest 2>&1`, `devenv tasks run lele:lint 2>&1` — each leaf does one job; `devenv shell -- cargo build --all-targets --all-features 2>&1` etc. remain as manual fallbacks — raw `cargo …` is the fallback only when `devenv.nix` is absent. **Agents NEVER run `bacon` — `bacon clippy` is USER-ONLY (TUI).**
+- At the end of every non-trivial code change, run `cargo clippy --all-targets --all-features -- -D warnings` via `devenv tasks run lele:clippy 2>&1` before `lele_lint` (`devenv tasks run lele:lint 2>&1` or `cargo run --manifest-path ../lele_lint/Cargo.toml 2>&1`); fix `clippy -D warnings` first, then lint violations. Agents use `cargo clippy`, never `bacon`.
 
 Path with spaces (e.g. `[AAI] Agentic AI`) — prepend `CARGO_TARGET_DIR=/tmp/frt-build` to all cargo commands; devenv sets this via `env.CARGO_TARGET_DIR` if needed.
 
@@ -62,7 +59,7 @@ Path with spaces (e.g. `[AAI] Agentic AI`) — prepend `CARGO_TARGET_DIR=/tmp/fr
 
 **No agent may add `#[allow(clippy::…)]` / `#![allow(clippy::…)]` for `clippy::pedantic` + `clippy::nursery` on its own.**
 
-If `cargo clippy -- -D warnings` surfaces a `clippy::pedantic` or `clippy::nursery` lint:
+If `cargo clippy --all-targets --all-features -- -D warnings` surfaces a `clippy::pedantic` or `clippy::nursery` lint:
 
 1. Report the exact lint + `file:line` (`Cargo.toml: E021` / `clippy.toml: E022` context).
 2. Propose the minimal fix: rewrite the code (`checked_add`, `try_from`, `Ipv4Addr::LOCALHOST`, `if let` vs `match`, etc.) as first choice; `#[allow]` only as last resort.
@@ -85,7 +82,7 @@ It lists crates under the folder (excludes workspaces and dirs in `lele.toml [le
 
 ## Per-Crate devenv.nix — Always Read First
 
-Before any `cargo build` / `cargo clippy` / `cargo nextest run` / `cargo run --manifest-path ../lele_lint/Cargo.toml` on a crate, read `<crate>/devenv.nix` (and `devenv.yaml` / `devenv.lock` if present). `tasks."lele:*"` there are the crate's canonical examples (`lele:build`, `lele:clippy`, `lele:fmt`, `lele:nextest`, `lele:lint`, `lele:taxonomy_check` in `lele_lint:15-26`). **If `devenv.nix` defines tasks, you MUST run `devenv tasks run <task> 2>&1` — NEVER run the underlying `cargo …` by hand; NEVER pipe to `| tail`/`| head`; always append `2>&1`**; fall back to raw `cargo nextest run --all-targets 2>&1` / `cargo clippy -- -D warnings 2>&1` only if `devenv.nix` is absent. **Agents NEVER run `bacon` — it is USER-ONLY.**
+Before any `cargo build` / `cargo clippy` / `cargo nextest run` / `cargo run --manifest-path ../lele_lint/Cargo.toml` on a crate, read `<crate>/devenv.nix` (and `devenv.yaml` / `devenv.lock` if present). `tasks."lele:*"` there are the crate's canonical examples (`lele:build`, `lele:clippy`, `lele:fmt`, `lele:nextest`, `lele:lint`, `lele:taxonomy_check` in `lele_lint:15-26`). **If `devenv.nix` defines tasks, you MUST run `devenv tasks run <task> 2>&1` — NEVER run the underlying `cargo …` by hand; NEVER pipe to `| tail`/`| head`; always append `2>&1`**; fall back to raw `cargo nextest run --all-targets --all-features 2>&1` / `cargo clippy --all-targets --all-features -- -D warnings 2>&1` only if `devenv.nix` is absent. **Agents NEVER run `bacon` — it is USER-ONLY.**
 
 After editing `devenv.nix` (channel, hooks, `languages.rust.targets`, `tasks`), **re-enter `devenv shell`** to regenerate `.pre-commit-config.yaml` and provision `nightly` + `wasm32-unknown-unknown` via `fenix` — otherwise hooks stay stale (e.g. `freenet_example` drifted 4 vs 5 hooks until `devenv shell`) and raw `cargo` needs `rustup target add wasm32-unknown-unknown --toolchain nightly` + `CARGO_TARGET_DIR=/tmp/frt-build` for space-in-path.
 

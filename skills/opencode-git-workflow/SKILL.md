@@ -1,6 +1,6 @@
 ---
 name: opencode-git-workflow
-description: Use when the user asks about git commands, commit messages, branch management, rebasing, merging, resolving merge conflicts, stashing, reverting, or any git workflow. Provides commit message conventions, atomic commit rules, branching strategy, rebase workflow, conflict resolution protocol, stashing patterns, and dangerous-command safeguards.
+description: Use for git commands, commit messages, branch management, rebasing, merging, conflict resolution, stashing, and reverting. Commit conventions, atomic commits, rebase workflow, and dangerous-command safeguards.
 ---
 
 # Git Workflow
@@ -8,241 +8,85 @@ description: Use when the user asks about git commands, commit messages, branch 
 ## 0. Authorization Gate
 
 **Never stage, commit, push, merge, rebase, or amend without an explicit command from the user.**
-An "explicit command" is a direct statement such as "commit", "stage that file",
-"push to origin", or "merge the PR". Vague acknowledgments like "yes", "ok",
-"go ahead", or mere silence do NOT count. If the user's intent is ambiguous,
-ask: "I need an explicit command to proceed. What would you like me to do?"
+An explicit command is a direct statement ("commit", "stage that file", "push to origin",
+"merge the PR"). "Yes"/"ok"/"go ahead"/silence do **not** count — ask. This overrides everything
+below.
 
-This rule overrides all other instructions in this skill.
-
-## 1. Commit Message Convention
-
-Use **Conventional Commits** format:
+## 1. Commit Messages — Conventional Commits
 
 ```
 <type>(<scope>): <imperative description>
 
-[optional body]
-
-[optional footer]
+[optional body — why, wrapped at 72]
 ```
 
-### Types
+Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`.
+Lowercase after the type, no trailing period, imperative mood ("add", not "added"); breaking
+changes get `!` (`feat!: change API`). Scope is optional but encouraged (`fix(mlp): …`).
 
-| Type | When to use |
-|------|-------------|
-| `feat:` | A new feature |
-| `fix:` | A bug fix |
-| `docs:` | Documentation only |
-| `refactor:` | Code change that neither fixes a bug nor adds a feature |
-| `test:` | Adding or fixing tests |
-| `chore:` | Build process, CI, tooling, dependencies |
-| `perf:` | Performance improvement |
-| `style:` | Formatting (not code logic) |
+## 2. Branches
 
-### Rules
-
-- **Imperative present tense:** "Add feature" not "Added feature"
-- **Lowercase after type:** `feat: add pagination` not `feat: Add pagination`
-- **No period at end of subject line**
-- **Scope optional** but encouraged when module-specific: `fix(mlp): handle NaN in loss`
-- **Breaking changes:** append `!` after type/scope: `feat!: change API signature`
-- **Body** wraps at 72 characters, explains *why* not *what*
-
-### Examples
-
-```
-feat: add session persistence across restarts
-
-Persist session state to disk on every tick so reconnecting peers
-can resume without full re-sync.
-```
-
-```
-refactor(api): extract normalization from handler
-```
-
-```
-fix(auth): return error on invalid token instead of panic
-```
-
-## 2. Branch Naming
-
-```
-<type>/<short-description>
-```
-
-### Patterns
-
-| Pattern | Example |
-|---------|---------|
-| `feat/<desc>` | `feat/session-persistence` |
-| `fix/<desc>` | `fix/nan-loss` |
-| `refactor/<desc>` | `refactor/extract-normalization` |
-| `chore/<desc>` | `chore/update-deps` |
-| `docs/<desc>` | `docs/api-readme` |
-
-### Rules
-
-- Lowercase, hyphens between words
-- Keep under 50 characters
-- Delete branch after merge
+`<type>/<short-description>` — e.g. `feat/session-persistence`, `fix/nan-loss`. Lowercase,
+hyphenated, <50 chars, delete after merge.
 
 ## 3. Atomic Commits
 
-One commit = one logical change. A commit must:
+One logical change per commit; it must pass tests (`[[AGENTS.md::RUN_ALL_TESTS]]`). Split when a
+change spans two modules, mixes refactor + feature, or mixes mechanical renames with logic.
+Combine only when changes are interdependent.
 
-- **Pass tests** (run via `[[AGENTS.md::RUN_ALL_TESTS]]` — see `## Project Commands` in AGENTS.md)
-- Be a single concern (don't mix formatting changes with logic changes)
+## 4. Rebase
 
-### When to split
-
-Split into multiple commits when a change touches:
-- Two unrelated modules (e.g., ML + Dataset)
-- A refactor + a feature in the same file
-- Mechanical changes (renames, re-exports) + logic changes
-
-### When to combine
-
-Combine into one commit when:
-- Fixing a bug introduced in the same branch's earlier commit (rebase + squash)
-- Changes are interdependent and don't pass tests individually
-
-## 4. Rebase Workflow
-
-Prefer rebase over merge to maintain a linear history.
-
-### Before pushing (clean up local history)
+Prefer rebase over merge for linear history.
 
 ```bash
-git rebase -i HEAD~N
+git fetch origin && git rebase origin/main   # before pulling upstream
+git rebase -i HEAD~N                          # cleanup before pushing: pick/fixup/squash/reword/edit
+git push --force-with-lease                   # never bare --force
 ```
 
-Common operations:
-- `pick` — keep as-is
-- `fixup` / `f` — keep changes but discard the commit message
-- `squash` / `s` — combine with previous, edit message
-- `reword` / `r` — edit commit message only
-- `edit` / `e` — stop to amend
+**Never rebase commits that exist on a shared branch.**
 
-### Before pulling upstream
+## 5. Conflicts
 
-```bash
-git fetch origin
-git rebase origin/main
-```
-
-### After rebasing
-
-```bash
-git push --force-with-lease
-```
-
-### Golden rule
-
-**Never rebase commits that exist on a shared branch** (main, release, or another person's branch).
-
-## 5. Conflict Resolution Protocol
-
-1. **List conflicted files:**
-   ```bash
-   git status
-   ```
-2. **Open each file and find conflict markers:**
-   ```
-   <<<<<<< HEAD
-   (your/current change)
-   =======
-   (incoming change)
-   >>>>>>> branch-name
-   ```
-3. **For each conflict:**
-   - Understand both sides
-   - Choose one side, or write a combined version
-   - **Remove the conflict markers**
-   - Verify the result works: `[[AGENTS.md::RUN_ALL_TESTS]]` for affected modules
-4. **Stage and continue:**
-   ```bash
-   git add <resolved-files>
-   git rebase --continue
-   ```
-5. **If stuck:** `git rebase --abort` or `git merge --abort`
+1. `git status` to list conflicts.
+2. Resolve each file (choose a side or combine), remove the `<<<<<<<`/`=======`/`>>>>>>>`
+   markers.
+3. Verify: `[[AGENTS.md::RUN_ALL_TESTS]]`.
+4. `git add <files>` then `git rebase --continue` (or `git rebase --abort` if stuck).
 
 ## 6. Stashing
 
 ```bash
-# Save current work (including untracked files)
-git stash -u
-
-# Save with a descriptive message
-git stash push -m "wip: half-done refactor of MLP training"
-
-# List stashes
-git stash list
-
-# Apply and keep on the stack
-git stash apply
-
-# Apply and drop
-git stash pop
+git stash -u                              # include untracked
+git stash push -m "wip: half-done refactor"
+git stash list / git stash apply / git stash pop
 ```
 
-### When to stash
-- Need to switch branches temporarily
-- Need to pull/rebase but have dirty working tree
+Use to switch branches or rebase with a dirty tree. If the work spans hours, commit it on a
+feature branch instead.
 
-### When NOT to stash
-- Work spanning more than a few hours — commit it (even as `wip:`) on a feature branch
+## 7. Undo
 
-## 7. Revert vs. Reset
+| Situation | Command |
+|---|---|
+| Undo a published commit | `git revert <commit>` (new commit) |
+| Undo a local commit, keep changes staged | `git reset --soft HEAD~1` |
+| Discard local commit + changes (careful) | `git reset --hard HEAD~1` |
+| Unstage a file | `git reset HEAD <file>` |
 
-| Situation | Command | Effect |
-|-----------|---------|--------|
-| Undo a **published** commit | `git revert <commit>` | Creates a new commit that undoes changes |
-| Undo a **local** commit | `git reset --soft HEAD~1` | Keeps changes staged |
-| Discard a local commit and its changes | `git reset --hard HEAD~1` | Destroys changes. Use with extreme caution |
-| Unstage a file | `git reset HEAD <file>` | Keeps file changes but unstages them |
-
-## 8. PR / Review Flow
-
-1. **Before opening a PR:**
-   - Run tests: `[[AGENTS.md::RUN_ALL_TESTS]]`
-   - Rebase onto latest `main`
-   - Squash fixup commits into logical units
-2. **During review:**
-   - Address feedback in new commits (don't amend yet)
-3. **Before merge:**
-   - Squash fixup/response commits
-   - Rebase onto latest `main` again
-4. **Merge strategy:** Prefer **squash merge** or **rebase merge**.
-
-## 9. Dangerous Command Safeguards
+## 8. Safeguards & Quick Reference
 
 | Don't | Instead |
-|-------|---------|
+|---|---|
 | `git push --force` | `git push --force-with-lease` |
-| `git reset --hard HEAD~N` without checking | `git log --oneline -N` first |
-| `git commit -m "..."` without body | Write multi-line commit messages explaining *why* |
-| `git rebase main` without fetching first | `git fetch origin && git rebase origin/main` |
-
-## 10. Quick Reference
+| `git reset --hard HEAD~N` blindly | `git log --oneline -N` first |
+| `git rebase main` without fetching | `git fetch origin && git rebase origin/main` |
 
 ```bash
-# Inspect
-git log --oneline --graph -20
-git diff
-git diff --cached
+git log --oneline --graph -20   # inspect
+git diff / git diff --cached    # working / staged
 git status
-
-# Branch
-git checkout -b feat/foo
-git branch -d feat/foo
-
-# Remote
-git fetch origin
-git pull --rebase
-git push --force-with-lease
-
-# Cleanup
+git checkout -b feat/foo ; git branch -d feat/foo
 git clean -fd
 ```

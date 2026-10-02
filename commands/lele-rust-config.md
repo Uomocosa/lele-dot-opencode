@@ -14,7 +14,7 @@ Audit or scaffold a Rust crate toward the `lele-rs` canonical template (`~/.conf
 **Steps — Mode 1 Audit/Fix `[crate-path] [--check] [--with-freenet]`:**
 
 1. Resolve `crate = <crate-path or .>`; verify `Cargo.toml` exists else error → suggest `create`.
-2. Load canonical refs: `lele-rs/SKILL.md: Lele Rust Config` + `lele-rs/references/lele-rust-config/{Cargo.toml,clippy.toml,devenv.nix,devenv.yaml,rust-toolchain.toml,lele.toml,.gitignore}` + `AGENTS.md: Devenv Tasks MANDATORY` + `lele-lint-rs E021/E022` + `devenv-rs tasks/hooks` + `freenet: Freenet Devenv Overlay` if auto-detected or `--with-freenet`.
+2. Load canonical refs: `lele-rs/SKILL.md: Lele Rust Config` + `lele-rs/references/lele-rust-config/{Cargo.toml,clippy.toml,devenv.nix,devenv.yaml,rust-toolchain.toml,lele.toml,.gitignore}` + `AGENTS.md: Devenv Tasks MANDATORY` + `lele_lint` E021/E022 (Cargo.toml/clippy.toml config) + `devenv-rs tasks/hooks` + `freenet: Freenet Devenv Overlay` if auto-detected or `--with-freenet`.
 3. Audit (diff, do not yet write):
    - `Cargo.toml`: `edition = "2024"`, `lints.clippy` full E021 block (pedantic+nursery deny + 13 denies), pinned `=version` deps (flag unpinned/caret), `lints.workspace` alternative accepted. Propose patch toward template, preserving crate name/version/description.
    - `clippy.toml`: 4 allows (E022).

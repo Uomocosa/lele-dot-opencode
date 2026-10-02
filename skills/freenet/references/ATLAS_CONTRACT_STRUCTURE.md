@@ -64,7 +64,7 @@ State = O(subjects) — one record per subject (e.g. site), not per click. High-
 - Anti-Sybil not in contract — Atlas is durable index, Sybil resistance is via `Ghost Keys`/donation minting at higher layer (same as Raven).
 - WASM bytes pin merge/bounds logic.
 
-## Mapping to freenet-contract-design
+## Mapping to the freenet CRDT design
 
 - §0 pure reducer, §2 idempotent (`max(version)`), §3 structural summary (per-subject versions) avoids scalar-total masking (compensating divergence: two peers could hold 100 subjects at different versions but same count).
 - §5 O(subjects) not O(clicks) — durable discovery vs Raven's live feed tradeoff is exactly §7 "which contract do you need?" decision.

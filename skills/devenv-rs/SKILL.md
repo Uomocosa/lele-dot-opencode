@@ -45,7 +45,7 @@ Per-crate `devenv.nix` is the source of truth; `devenv.yaml` pins inputs. **Cano
   scripts.watcher = {
     exec = ''
       watchexec -c -e rs \
-      "cargo clippy && cargo nextest run --all-targets && cargo run"
+      "cargo clippy --all-targets --all-features -- -D warnings && cargo nextest run --all-targets --all-features && cargo run"
     '';
     packages = [ pkgs.watchexec ];
   };
@@ -106,10 +106,10 @@ inputs:
 ```nix
 # https://devenv.sh/tasks/
 tasks = {
-  "lele:build" = { exec = "cargo build --all-targets --features dev"; showOutput = true; };
-  "lele:clippy" = { exec = "cargo clippy --all-targets --features dev -- -D warnings"; showOutput = true; };
+  "lele:build" = { exec = "cargo build --all-targets --all-features"; showOutput = true; };
+  "lele:clippy" = { exec = "cargo clippy --all-targets --all-features -- -D warnings"; showOutput = true; };
   "lele:fmt" = { exec = "cargo fmt -- --check"; showOutput = true; };
-  "lele:nextest" = { exec = "cargo nextest run --all-targets --features dev"; showOutput = true; };
+  "lele:nextest" = { exec = "cargo nextest run --all-targets --all-features"; showOutput = true; };
   "lele:lint" = { exec = "cargo run --manifest-path ../lele_lint/Cargo.toml"; showOutput = true; };
   "lele:taxonomy_check" = { exec = "cargo run --manifest-path ../lele_function_taxonomy/Cargo.toml --features rustc-private -- --manifest-path ./Cargo.toml"; showOutput = true; };
   "freenet:contract-harness" = { exec = "cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture"; showOutput = true; };
@@ -117,7 +117,7 @@ tasks = {
 };
 ```
 
-Leaf tasks need `showOutput = true` so `devenv-tasks` (PR #2231) streams `stdout` via `println!` instead of capturing until failure — without it `cargo` `Finished` on fresh builds is swallowed and `| tail` on the caller hangs waiting for lines that never flush. Use `showOutput` not `| tail`; `tail` on fresh tasks blocks 120s timeout with `(no output)`.
+Leaf tasks need `showOutput = true` so `devenv-tasks` (PR #2231) streams `stdout` via `println!` instead of capturing until failure — without it `cargo` `Finished` on fresh builds is swallowed and `| tail` on the caller hangs waiting for lines that never flush. Use `showOutput` not `| tail`; `tail` on fresh tasks blocks 120s timeout with `(no output)`. Canonical flags: `lele:build` / `lele:clippy` / `lele:nextest` MUST run with `--all-targets --all-features`; `lele_enforce_config` rejects any crate missing either flag (substring check).
 
 WASM isolation: when `env.CARGO_TARGET_DIR="/tmp/frt-build"` is set for space-in-path, `build.rs` must NOT reuse it for `contract/target`. Isolate:
 ```rust
@@ -188,7 +188,7 @@ services.postgres = {
 };
 services.redis.enable = true;
 processes.api.exec = "secretspec run -- cargo run";
-processes.watcher.exec = "${lib.getExe pkgs.watchexec} -c -e rs -- cargo nextest run --all-targets";
+processes.watcher.exec = "${lib.getExe pkgs.watchexec} -c -e rs -- cargo nextest run --all-targets --all-features";
 ```
 
 Ready probes, `after` dependencies, automatic port allocation prevent parallel-env collisions. Alternative managers (`process-compose`, `overmind`) via `process.manager`.

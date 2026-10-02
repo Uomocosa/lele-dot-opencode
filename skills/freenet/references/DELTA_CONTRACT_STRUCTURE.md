@@ -60,7 +60,7 @@ State = O(pages + tombstones + config). `pages` bounded by site author (owner-wr
 - Single-owner: all writes require `VerifyingKey == owner` + valid `Signature`. Client forgery without owner's `SigningKey` is rejected in `verify`. Contract key prefix pins owner identity — forging prefix requires owning the exact VK that hashes to that 10-char prefix (brute-force vanity-ID via `TDiffff/freenet-vanity-id` exists but only grinds prefix, not full key).
 - WASM rebuild → new `ContractKey` (same as website) — would orphan existing sites.
 
-## Mapping to freenet-contract-design
+## Mapping to the freenet CRDT design
 
 - §0 pure reducer, §2 idempotent (per-page `max(version)`), §3 structural summary + non-empty delta only when behind; empty delta when converged (teaches #5072 `self_delta_empty` backstop).
 - §7 tombstone safety: expiry of deletion marker is unsafe (Delta gets it right — tombstone persists).

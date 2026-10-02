@@ -51,7 +51,7 @@ State = O(web archive size) (tar.xz). No per-user/per-click state — single ver
 - Only holder of `SigningKey` can produce valid `signature` over `version || web`; any peer can verify via `Parameters` (VerifyingKey). Signature binds version+content — tampering fails `validate_state`.
 - **WASM pinning**: changing `MAX_METADATA_SIZE`/`MAX_WEB_SIZE` or any code rehashes `website_contract.wasm` → new `ContractKey` for every site. Must rebuild committed `crates/fdev/resources/website_contract.wasm` and ship `fdev` update; existing sites keep old key unless user passes `--contract-wasm` legacy WASM. Warning at `src/lib.rs:19-23`.
 
-## Mapping to freenet-contract-design
+## Mapping to the freenet CRDT design
 
 - §0 pure reducer: validates signature, version monotonic — no hidden state.
 - §1 reconcile wall: would be LWW scalar if used for multi-writer; as single-writer LWW it is correct but teaches the cost of scalar+whole-state-delta (no incremental sync). Contrast with River's per-field delta.

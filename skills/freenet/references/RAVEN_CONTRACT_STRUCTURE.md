@@ -53,7 +53,7 @@ All merges are commutative/associative/idempotent. `facade` contracts treat each
 - Owner-writes surfaces (user shard) — only owner's VK accepted (`VK == params`). Multi-writer surfaces (global index, thread) — any signed post accepted, abuse resistance via `Ghost Keys`/`facade` Sybil gating (separate subsystem).
 - WASM bytes pin contract logic; ML-DSA params pin owner. Forking contract → new key (isolated shard epoch).
 
-## Mapping to freenet-contract-design
+## Mapping to the freenet CRDT design
 
 - §0 pure reducer: merges are pure (no clock), `seq` monotonic replaces wall time.
 - §2 idempotent: per-post `id` dedup, per-key `seq` max — replay no-op.

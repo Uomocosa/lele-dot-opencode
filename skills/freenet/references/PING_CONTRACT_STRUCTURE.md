@@ -64,7 +64,7 @@ Per-peer history capped at newest 10 + in-window tail. Live state settles at ~`t
 - **Convergence vs. forgery**: logical clock makes merge deterministic but lets a future-dated timestamp (unauthenticated — `validate_state` checks nothing) pin `reference` a year ahead, truncating every peer's history to 10 and never recovering (newest-ten pin). Doc at `types/src/lib.rs:146-191` calls this a genuine regression vs wall clock; fix is `validate_state` rejecting implausible timestamps (fine to read clock there — rejecting input is not merging).
 - Takeaway quoted in docs: "Reading the clock at the WRITE (`insert`) is what makes it data; reading it at the MERGE is what makes the merge non-deterministic."
 
-## Mapping to freenet-contract-design
+## Mapping to the freenet CRDT design
 
 - §0 pure reducer: merge is pure — TTL anchored on `max(union)` not `Utc::now()`.
 - §2 idempotent: `merge` unions, not `+1`.

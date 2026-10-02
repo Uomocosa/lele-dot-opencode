@@ -64,7 +64,7 @@ State = O(members + bans + member_info + messages_window + secrets). Message win
 - Private rooms: `secrets` holds encrypted room secrets + rotation; metadata (existence, member count, invite tree) is still observable (see River README).
 - Upgrade: `OptionalUpgradeV1` lets owner sign a pointer to a new contract address. New WASM → new key → migration copies state; old contract stays readable. Partially implemented (see `river#59`).
 
-## Mapping to freenet-contract-design
+## Mapping to the freenet CRDT design
 
 - §0 pure reducer: `update_state` is pure `merge(verify(params))`.
 - §1 reconcile wall: avoided via non-empty structural `ChatRoomStateV1Delta` + structural summary.
