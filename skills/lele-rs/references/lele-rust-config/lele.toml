@@ -1,5 +1,12 @@
+[lele.lint]
+
 [honesty]
 declared_honest = []
 declared_dishonest = ["std::time::SystemTime::now", "std::time::Instant::now", "rand::thread_rng", "rand::random", "getrandom::getrandom", "std::fs::read", "std::fs::write", "std::env::var"]
-honesty_depth = 1
-entry_allowlist = ["src/main.rs", "examples/**", "src/testing/**"]
+
+# [[lele.boundary]]
+# name       = "session is pure protocol logic"
+# why        = "Session receives `now` and messages as arguments and returns actions."
+# folders    = ["src/discovery/session"]
+# cannot_use = ["tokio", "libp2p", "bevy", "std::net", "std::fs", "std::time"]
+# require    = "honest"
