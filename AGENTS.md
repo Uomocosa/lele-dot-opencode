@@ -1,8 +1,12 @@
 # Global OpenCode Architecture
 
-This file documents the global skill/agent/command architecture. It applies to every opencode session.
+This file documents the global skill/agent architecture (opencode v2). It applies to every opencode session.
 
 ## Skill Loading (MUST)
+
+Skills are auto-discovered from `~/.config/opencode/skills/` and `.opencode/skills/` and
+advertised by their `description`; load them on demand with the `skill` tool. Nothing is
+preloaded (v2 has no `instructions[]`).
 
 Before answering any question, proposing a plan, or modifying code:
 1. Review `<available_skills>` in your system prompt
@@ -33,9 +37,9 @@ Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized int
 
 No `*-(language_fullname)` multi-variant pattern — if a tool ships as a Rust crate, it is `*-rs`; the agnostic protocol is the bare name.
 
-**Tool permission rule:** Language-agnostic bare tools (`libp2p`, `freenet`, `pixi`) are NOT matchable by glob patterns. They must be listed by their exact full name in `permission.skill`:
+**Tool permission rule:** Language-agnostic bare tools (`libp2p`, `freenet`, `pixi`) are NOT matchable by glob patterns. They must be listed by their exact full name as `skill` rules in `permissions`:
 ```json
-{ "pixi": "allow", "libp2p": "allow", "freenet": "allow" }
+{ "action": "skill", "resource": "libp2p", "effect": "allow" }
 ```
 Only the `opencode-*`, `definition-*`, and `*-rs`/`*-py`/`*-ts` patterns support glob matching. This prevents accidental inclusion of unrelated tool skills.
 
@@ -45,23 +49,17 @@ Each project's `opencode.json` can select which global skills are visible:
 
 ```json
 {
-  "permission": {
-    "skill": {
-      "*": "deny",
-      "opencode-*": "allow",
-      "definition-*": "allow",
-      "*-py": "allow",
-      "pixi": "allow"
-    }
-  }
+  "permissions": [
+    { "action": "skill", "resource": "*", "effect": "deny" },
+    { "action": "skill", "resource": "opencode-*", "effect": "allow" },
+    { "action": "skill", "resource": "definition-*", "effect": "allow" },
+    { "action": "skill", "resource": "*-py", "effect": "allow" },
+    { "action": "skill", "resource": "pixi", "effect": "allow" }
+  ]
 }
 ```
 
 Last matching rule wins. Skills with `deny` are hidden from the agent entirely.
-
-## Commands
-
-Custom slash commands live in `~/.config/opencode/commands/<name>.md` and are available in every project. 
 
 ## Agents
 
@@ -69,7 +67,7 @@ Custom agents live in `~/.config/opencode/agents/<name>.md` and are available in
 
 ## Past Conversations
 
-Past important conversation summaries are saved repo-wide in `projects/.opencode/summaries/` as `YYYY_MM_DD_HH_MM-<slug>.md` (autosorted). Read the most recent file there (`ls -t projects/.opencode/summaries/ | head -1`) for context via `/save-conversation <slug>` just writes, never commits.
+Past important conversation summaries are saved repo-wide in `projects/.opencode/summaries/` as `YYYY_MM_DD_HH_MM-<slug>.md` (autosorted). Read the most recent file there (`ls -t projects/.opencode/summaries/ | head -1`) for context. Writing a summary never commits.
 
 ## CRITICAL: Commit Authorization
 
