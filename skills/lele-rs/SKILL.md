@@ -11,7 +11,7 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 
 | Task | Load |
 |------|------|
-| Rust syntax, file layout, delegates, imports, struct shape | `lele-syntax-rs` |
+| Rust syntax, file layout, delegates, imports, struct shape, judgement rules | `lele-syntax-rs` (+ `references/RATIONALE.md`) |
 | Reproducible dev environment, Nix, languages, packages, tasks, services, hooks | `devenv-rs` |
 | Bevy ECS Plugin/Component/System patterns (bevy 0.19, Rust) | `bevy-rs` |
 | P2P networking SwarmBuilder, transports, stream protocols | `libp2p` |
@@ -27,11 +27,19 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 | Date-time, `Zoned`/`Timestamp`/`Span`, time zones, Temporal format | `jiff-rs` |
 | Function taxonomy — pure/impure vs honest/dishonest definitions, pseudocode | `definition-function-taxonomy` |
 
+**`lele:taxonomy_check`** runs `lele_function_taxonomy` (a rustc-MIR driver). It checks only
+`[[lele.boundary]]` folders with `require = "honest"`: every function physically inside must reach hidden
+I/O (clock, fs, net, env, process, randomness, non-`Freeze` globals, `thread_local!`) only through its
+signature. It exits instantly when no honest boundary is configured (so most crates pay nothing). Logging
+(`tracing`/`log` callsites) is treated as honest. A finding is `TAX001`; bad config is `TAX002`.
+
 ## Load Order
 
 1. `lele-rs` (this file) — always.
-2. `lele-syntax-rs` — for any `src/` edit. The linter (`lele_lint`) enforces these rules; fix
-   diagnostics from its `error[E0xx]` messages (run `lele_lint --checker-list` to list checkers).
+2. `lele-syntax-rs` — for any `src/` edit. The linter (`lele_lint`) enforces the mechanical
+   rules; the full list is generated into `lele_lint/RULES.md`, and `lele_lint --explain E0xx`
+   prints one rule with a bad/good example (`--checker-list` lists checkers). Judgement rules
+   the linter cannot check live in `lele-syntax-rs/references/RATIONALE.md`.
 3. `devenv-rs` — when touching `devenv.nix`, `devenv.yaml`, packages, services, tasks, or git-hooks.
 4. Domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...) — when the crate depends on that engine/protocol.
 

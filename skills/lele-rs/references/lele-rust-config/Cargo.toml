@@ -38,3 +38,14 @@ serde = { version = "=1.0.228", features = ["derive"] }
 
 [dev-dependencies]
 # nextest is a devenv package, not a cargo dep
+
+# Early-phase profile: optimise for compile time and peak RAM, not runtime speed.
+# Debug info is a big RAM/disk cost; keep only line tables for our crate
+# (readable backtraces) and none for dependencies.
+[profile.dev]
+opt-level = 0
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 1
+debug = false
