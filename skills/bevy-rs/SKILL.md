@@ -116,5 +116,8 @@ pub fn increment(state: &mut {{module}}::ClickerState, amount: u64) {
 ## Notes
 
 - Compose plugins as a tuple: `app.add_plugins((p2p::Plugin::new(cfg), sync::Plugin));`.
-- `lele_bevy_lint` exists (`devenv tasks run lele:bevy-lint 2>&1`, codes E005/E008/E029) but is
-  not yet authoritative/up to date — do not rely on it as the source of truth for these rules.
+- `lele_bevy_lint` is authoritative for the Bevy-specific rules: run
+  `devenv tasks run lele:bevy-lint 2>&1` (codes E005/E008/E029/E037/E038/E039) or
+  `cargo run --manifest-path ../lele_bevy_lint/Cargo.toml -- --explain E0xx`. See the
+  `bevy-ui-preview` skill for the UI preview rules (E029/E037/E038/E039), the
+  `lele_bevy_preview` scene DSL and the test template.

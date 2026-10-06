@@ -1,6 +1,6 @@
 ---
 name: lele-syntax-rs
-description: Use for Rust code in this project. Atomic files, domain folders, #[atomic_delegates] bodies in methods/, __basic__/ containers, bevy_systems/, domain-prefix imports, test_usage, thiserror, struct field shape. lele_lint enforces these; this skill is the mental model and the linter workflow, with judgement rules in references/RATIONALE.md.
+description: Use for Rust code in this project. Atomic files, domain folders, #[atomic_delegates] bodies in methods/, __basic__/ containers, bevy_systems/, domain-prefix imports, test_usage, thiserror, struct field shape. lele_lint enforces these; this skill is the mental model and the linter workflow, with judgement rules in references/RATIONALE.md and anti-patterns in references/SMELLS.md.
 ---
 
 # lele syntax and architecture
@@ -41,7 +41,12 @@ pub fn increment(counter: &mut ClickCounter) {
 - **Imports.** Import the domain and qualify: `use crate::stock;` then `stock::Item`.
   `super::` is allowed only inside `#[cfg(test)]`; `crate::` appears only in `use` items.
 - **Struct shape.** Exactly one field means a tuple newtype with `#[derive(Deref)]`, read
-  through deref; two or more means named fields. Positional `.0` is banned.
+  through deref; two or more means named fields. Positional `.0` is banned. A newtype
+  wraps one **scalar** value; it never wraps a collection (E028) — a collection is held
+  directly as a field. A type alias only earns its place when the underlying type is long
+  or noisy (`type ModuleInfoMap = HashMap<PathBuf, ModuleInfo>;`); aliasing a short type
+  (`type Entries = Vec<Entry>;`) is just repetition. Alias → name a long type only;
+  newtype → distinct scalar with an invariant; struct → two or more fields.
 - **Errors.** `thiserror` enums; never `unwrap`/`expect`/`panic`.
 - **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`).
 - **No comments** in `src/`/`methods/` except `// needed helper: <why>` and the test opt-out.
@@ -68,8 +73,18 @@ Never add `#[allow]`/`#[expect]` for `clippy::pedantic`/`clippy::nursery` — in
 When clippy objects, rewrite the code; if you cannot, stop and ask. Existing `#[allow]`
 are user-gated: do not broaden them or copy them to new sites.
 
-## 4. What the linter cannot check
+## 4. What the linter cannot check — READ BOTH FILES
 
-Judgement rules live in `references/RATIONALE.md`: one function one job, ubiquitous
-language, functional core / imperative shell, group by feature, parse don't validate,
-Screenplay E2E and turmoil, test vocabulary. Read it before designing, not before linting.
+`lele_lint` covers mechanical shape (`E0xx`, see `../lele_lint/RULES.md`). Everything it
+cannot check lives in two reference files, and reading both is mandatory before you design
+or review code:
+
+- `references/RATIONALE.md` — **principles**: positive design rules (do this).
+- `references/SMELLS.md` — **smells**: anti-patterns with bad/good examples (avoid this).
+
+Together they are the written form of how this workspace is built — representation,
+decomposition, naming. Most of "the way I program" lives in these two files.
+
+Boundary rule: **if a smell can be detected mechanically, it does not belong in either
+file — it becomes a `lele_lint` rule (`E0xx`).** Every entry names the `E0xx` that
+enforces part of it, or says "judgement only". Read both before designing.

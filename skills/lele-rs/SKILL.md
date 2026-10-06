@@ -11,7 +11,7 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 
 | Task | Load |
 |------|------|
-| Rust syntax, file layout, delegates, imports, struct shape, judgement rules | `lele-syntax-rs` (+ `references/RATIONALE.md`) |
+| Rust syntax, file layout, delegates, imports, struct shape, judgement rules | `lele-syntax-rs` (+ `references/RATIONALE.md`, `references/SMELLS.md`) |
 | Reproducible dev environment, Nix, languages, packages, tasks, services, hooks | `devenv-rs` |
 | Bevy ECS Plugin/Component/System patterns (bevy 0.19, Rust) | `bevy-rs` |
 | P2P networking SwarmBuilder, transports, stream protocols | `libp2p` |
