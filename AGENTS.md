@@ -81,10 +81,13 @@ Past important conversation summaries are saved repo-wide in `projects/.opencode
 
 **If any git hook fails (pre-commit, pre-push, commit-msg, etc.), STOP immediately.** Do not retry, amend, or bypass the failure. Inspect the hook output, identify the root cause, and **propose a concrete solution** for the failure before proceeding. **NEVER run with `--no-verify` / `-n` (or `SKIP=*`) to bypass hooks unless explicitly prompted to do so by the user.** Bypassing is only allowed on direct user instruction, and must be confirmed.
 
-## CRITICAL: Code Snippets — ALWAYS SHOW CODE (DEFAULT-ON)
+## CRITICAL: Code Snippets — ALWAYS SHOW CODE (DEFAULT-ON, NON-NEGOTIABLE)
 
-Whenever ANY response discusses code, behavior, structure, or a fix — in MOST conversations — you MUST include a concrete fenced code snippet. Prose alone is a violation.
+Whenever ANY response discusses code, behavior, structure, or a fix — in MOST conversations — you MUST include a concrete fenced code snippet. Prose alone is a violation. This rule overrides any instinct to summarize. The code preview IS the deliverable — a description of an edit is not a substitute for the edit.
+- Preview rule: before proposing or making ANY edit, show the literal code the user will receive — not a diff sketch, not a TODO, not "I'll extract X".
+- Before/after is mandatory when editing or proposing: every change = a fenced block with BEFORE then AFTER, each citing `path/to/file.rs:line` (from your own `Read`/`Grep`, never from memory). A proposal without before/after is INVALID.
+- Coverage: if a change touches N sites, show all N — or one representative plus the exact count and every location. No silent edits.
 - Trigger: mentioning a function, file, type, pattern, bug, fix, plan, or review → show code. Only pure non-code chat (scheduling, opinions with no code referent) is exempt, and then say nothing about code.
-- Format: fenced block with language tag (```rust, ```toml, ```nix, ```bash), minimal and copy-pasteable; before/after when editing or proposing.
-- Grounding: every snippet that refers to existing code MUST cite `path/to/file.rs:line` (from your own `Read`/`Grep`, never from memory). New code: label as `proposed` + target path.
-- No-snippet responses about code are forbidden — if you cannot show code, say what file you would need to read first.
+- Format: fenced block with language tag (```rust, ```toml, ```nix, ```bash), minimal and copy-pasteable. Show real code, never a hypothetical sketch.
+- Grounding: new code is labelled `proposed` + target path.
+- No-snippet responses about code are forbidden. If you cannot show code, you MUST name the exact file you would need to read first and stop.
