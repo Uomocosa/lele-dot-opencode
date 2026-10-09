@@ -46,7 +46,9 @@ pub fn increment(counter: &mut ClickCounter) {
   directly as a field. A type alias only earns its place when the underlying type is long
   or noisy (`type ModuleInfoMap = HashMap<PathBuf, ModuleInfo>;`); aliasing a short type
   (`type Entries = Vec<Entry>;`) is just repetition. Alias → name a long type only;
-  newtype → distinct scalar with an invariant; struct → two or more fields.
+  newtype → distinct scalar with an invariant; struct → two or more fields. Need
+  `X::from(...)`? Derive it with `derive_more::From` (`#[from(forward)]` to accept `Into`
+  types); never on a type with an invariant — see RATIONALE §9.
 - **Errors.** `thiserror` enums; never `unwrap`/`expect`/`panic`.
 - **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`).
 - **No comments** in `src/`/`methods/` except `// needed helper: <why>` and the test opt-out.

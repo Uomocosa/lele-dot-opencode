@@ -74,7 +74,7 @@ deliberate exceptions in this workspace are `methods/` (hide delegate bodies unt
 are needed), `__basic__/` (behaviour-free types do not each need a file and a test), and
 `bevy_systems/` (all systems of a domain are found in one place).
 
-Judgement only; the folder shape rules (**E001**, **E017**, **E029**) enforce the mechanics.
+Judgement only; the folder shape rules (**E001**, **E017**, **E040**) enforce the mechanics.
 
 Ref: Robert C. Martin, [Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html).
 
@@ -137,3 +137,54 @@ Prefer `Option<Child>` with `Default => None` and handle `Some` at the call site
 `#[allow(clippy::unwrap_used)]` with explicit user approval (see SKILL.md §3).
 
 Judgement only; the lint gate is enforced by **E021**.
+
+## 9. Constructors come from `derive_more::From`
+
+When a type needs a `::from()` / `.into()` constructor, derive it with `derive_more`
+(enable its `from` feature) instead of writing `impl From` by hand or spelling the
+wrapping out at every call site. This holds for any wrapped type, not only `String`:
+
+- **Newtype, same type in:** `#[derive(From)]` gives `From<T>`.
+- **Newtype, convertible types in:** add `#[from(forward)]` to get
+  `impl<U: Into<T>> From<U>` — `&str` into a `String` newtype, `u32` into a `u64`
+  newtype, `&str` into a `PathBuf` newtype.
+- **Sum type:** `#[derive(From)]` on an enum gives one `From` per single-field variant, so
+  `.into()` picks the variant from the value's type. Unit variants are skipped; two
+  variants holding the same type conflict (E0119) — mark all but one `#[from(skip)]`.
+
+```rust
+// judgement: derive the constructor; call sites name the value, not the wrapping
+#[derive(Debug, Clone, PartialEq, Eq, Deref, From)]
+#[from(forward)]
+pub struct Username(pub String);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deref, From)]
+#[from(forward)]
+pub struct Millis(pub u64);
+
+#[derive(Debug, Clone, PartialEq, Eq, Deref, From)]
+#[from(forward)]
+pub struct ConfigPath(pub PathBuf);
+
+let user = Username::from("ada");            // was Username("ada".to_string())
+let timeout = Millis::from(250u32);          // was Millis(u64::from(250u32))
+let path = ConfigPath::from("config.toml");  // was ConfigPath(PathBuf::from("config.toml"))
+
+#[derive(Debug, Clone, PartialEq, From)]
+pub enum Shape {
+    Circle(Circle),
+    Square(Square),
+    Empty,
+}
+
+let shape: Shape = circle.into();            // was Shape::Circle(circle)
+```
+
+Limit: **only for types without an invariant.** `From` is infallible and public, so
+deriving it on a checked newtype hands every caller a way around the check. A type with an
+invariant gets `TryFrom`/`FromStr` instead (§5) and never derives `From`. Do not derive
+`From` speculatively either: add it when a caller needs the conversion.
+
+Judgement only; not enforced. The newtype shape itself is **E018**.
+
+Ref: [derive_more `From`](https://docs.rs/derive_more/2.1.1/derive_more/derive.From.html).

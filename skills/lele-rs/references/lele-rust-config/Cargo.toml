@@ -32,7 +32,7 @@ as_conversions = "deny"
 [dependencies]
 # pinned for reproducibility — bump via `cargo update` then re-pin `=` versions
 thiserror = "=2.0.18"
-derive_more = { version = "=2.1.1", features = ["deref", "deref_mut"] }
+derive_more = { version = "=2.1.1", features = ["deref", "deref_mut", "from"] }
 tracing = "=0.1.44"
 serde = { version = "=1.0.228", features = ["derive"] }
 

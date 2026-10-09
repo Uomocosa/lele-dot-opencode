@@ -67,8 +67,16 @@ Next batch (<n> of <total>):
   - <item b: file:line — one-line change>
   - <item c: file:line — one-line change>
 
+Batch <n> preview:
+  <for EVERY item: file:line, then the literal `// before` / `// after` code block,
+   including knock-on edits (now-unused imports, callers, tests)>
+
 Proceed with batch <n>, or change the batch? (reply yes / re-scope / stop)
 ```
+
+**CRITICAL — code previews are mandatory at EVERY approval gate**, not only for batch 1.
+The next-batch prompt is invalid without the literal before/after snippets for every item;
+a bullet list of one-line changes is NOT a preview. The user approves code, not summaries.
 
 Do **NOT** auto-carry. Wait for the reply, then loop to Phase 2/3 with the next batch.
 
