@@ -6,7 +6,8 @@ This file documents the global skill/agent architecture (opencode v2). It applie
 
 Skills are auto-discovered from `~/.config/opencode/skills/` and `.opencode/skills/` and
 advertised by their `description`; load them on demand with the `skill` tool. Nothing is
-preloaded (v2 has no `instructions[]`).
+preloaded — v2 accepts `instructions[]` in the config but does **not** load it; always-on
+content lives in `AGENTS.md`.
 
 Before answering any question, proposing a plan, or modifying code:
 1. Review `<available_skills>` in your system prompt
@@ -26,6 +27,7 @@ Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized int
 | **General — definitions** | `definition-*` | `~/.config/opencode/skills/` | Always listed, never auto-loaded |
 | **Language-specific** | `*-rs`, `*-py`, `*-ts` | `~/.config/opencode/skills/` | Listed per-project via permissions |
 | **Language-agnostic tool** | `{{tool_name}}` (bare, no suffix) | `~/.config/opencode/skills/` | Always listed, never auto-loaded |
+| **Legacy (superseded)** | `*-legacy` | `~/.config/opencode/skills/` | Hidden by default; requires an exact `allow` |
 | **Project-specific** | Any valid name | `.opencode/skills/` in repo | Listed for that project only |
 
 **Naming rules:**
@@ -34,10 +36,11 @@ Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized int
 * **General — definitions (`definition-*`):** General language-agnostic definitions and pseudocode (e.g., `definition-function-taxonomy`). Always general, never language-specific.
 * **Language-specific (`*-rs`, `*-py`, `*-ts`):** Any skill whose content is tied to a single language MUST carry the suffix — this includes language-specific tools/crates (e.g., `bevy-rs`, `avian-rs` are Rust crates) and convention skills (e.g., `lele-syntax-rs`). A language-specific skill without a suffix is a violation.
 * **Language-agnostic tool (bare `{{tool_name}}`):** A tool available independent of language (protocol, platform, or cross-language tool) MUST be bare with no suffix (e.g., `libp2p`, `freenet`). Adding `-rs`/`-py`/`-ts` to a language-agnostic tool is a violation. Main example: `libp2p` stays `libp2p`, not `libp2p-rs`.
+* **Legacy (`*-legacy`):** A superseded skill kept for old crates (e.g. `devenv-rs-legacy`). The name matches no allow glob, so it is hidden by default and must be listed by exact name to be loaded — this keeps stale tooling out of new work.
 
 No `*-(language_fullname)` multi-variant pattern — if a tool ships as a Rust crate, it is `*-rs`; the agnostic protocol is the bare name.
 
-**Tool permission rule:** Language-agnostic bare tools (`libp2p`, `freenet`, `pixi`) are NOT matchable by glob patterns. They must be listed by their exact full name as `skill` rules in `permissions`:
+**Tool permission rule:** Language-agnostic bare tools (`libp2p`, `freenet`, `pixi`) and `*-legacy` skills are NOT matchable by glob patterns. They must be listed by their exact full name as `skill` rules in `permissions`:
 ```json
 { "action": "skill", "resource": "libp2p", "effect": "allow" }
 ```
@@ -73,9 +76,9 @@ Past important conversation summaries are saved repo-wide in `projects/.opencode
 
 **NEVER stage, commit, push, merge, rebase, or amend anything without an explicit command from the user.** An "explicit command" means a direct statement like "commit", "stage that file", "push to origin", or "merge the PR". Implied intent, "go ahead", or silence does NOT count. When in doubt, ask. This rule overrides all other instructions in this file.
 
-## CRITICAL: Devenv Tasks — NO PIPE
+## CRITICAL: Task Runner — NO PIPE
 
-**NEVER pipe `devenv tasks run` to `| tail`, `| head`, `| grep`, or any pipe.** Tasks use `showOutput = true` and stream correctly via bare `devenv tasks run <task> 2>&1`. Pipes swallow output; `tail` on a fresh `cargo` task (zero `stdout` lines until `Finished`) blocks the full 120s timeout with `(no output)` and hides diagnostics (`cargo` writes to `stderr`, caller must add `2>&1`). Always use bare `devenv tasks run <task> 2>&1` — never `| tail`/`| head`.
+**NEVER pipe a task runner (`just`, `devenv tasks run`) to `| tail`, `| head`, `| grep`, or any pipe.** Legacy devenv tasks use `showOutput = true` and stream correctly via bare `devenv tasks run <task> 2>&1`; `just` streams too. Pipes swallow output; `tail` on a fresh `cargo` task (zero `stdout` lines until `Finished`) blocks the full 120s timeout with `(no output)` and hides diagnostics (`cargo` writes to `stderr`, caller must add `2>&1`). Always append `2>&1` on the caller — never `| tail`/`| head`.
 
 ## CRITICAL: Git Hooks
 

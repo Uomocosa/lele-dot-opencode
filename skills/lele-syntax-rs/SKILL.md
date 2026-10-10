@@ -60,14 +60,17 @@ pub fn increment(counter: &mut ClickCounter) {
 ## 2. Working with the linter
 
 ```bash
-devenv tasks run lele:lint 2>&1
+just lint                 # or: lele-lint --config lele.toml <crate>
 ```
 
-- Every finding is an error with a code. Explain one with
-  `devenv shell -- cargo run --manifest-path ../lele_lint/Cargo.toml -- --explain E0xx`
+- Install the linter from `github.com/Uomocosa/lele-rust-linter`; in a workspace run it once per
+  crate (`lele-lint --config lele.toml crates/<name>`).
+- Every finding is an error with a code. Explain one with `lele-lint --explain E0xx`
   (prints the rule with a bad/good example).
-- The full list is generated into `../lele_lint/RULES.md`; never copy rule text here.
-- `--sync-methods` regenerates the `methods/mod.rs` indexes after you add delegates.
+- `RULES.md` is per-repo (`crates/lele-lint/RULES.md`); never copy rule text here.
+- One root `lele.toml` + `clippy.toml` per workspace; boundary `folders` are workspace-relative
+  (the config file's directory is the base).
+- `--sync-methods` (or `just sync-methods`) regenerates the `methods/mod.rs` indexes after you add delegates.
 - A `[[lele.boundary]]` has two checks: imports (`cannot_use`; E036) and honesty
   (`require = "honest"`; `lele_function_taxonomy`). Ubiquitous language is guidance
   only — the linter does not check names.
@@ -81,7 +84,7 @@ are user-gated: do not broaden them or copy them to new sites.
 
 ## 4. What the linter cannot check — READ BOTH FILES
 
-`lele_lint` covers mechanical shape (`E0xx`, see `../lele_lint/RULES.md`). Everything it
+`lele_lint` covers mechanical shape (`E0xx`, see the repo's `RULES.md` — `crates/lele-lint/RULES.md`). Everything it
 cannot check lives in two reference files, and reading both is mandatory before you design
 or review code:
 

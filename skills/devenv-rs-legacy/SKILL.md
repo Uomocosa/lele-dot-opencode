@@ -1,11 +1,14 @@
 ---
-name: devenv-rs
-description: Use when creating or editing devenv.nix/devenv.yaml for Rust crates. Covers languages.rust nightly/stable, packages, scripts, env, enterShell, git-hooks, tasks, processes, services, tests, containers, and poly/monorepo composable imports. Always loaded via lele-rs.
+name: devenv-rs-legacy
+description: LEGACY (Nix/devenv). Load ONLY when a crate still has devenv.nix/devenv.yaml. The name ends in -legacy, so it is denied by default and must be explicitly permitted and requested; prefer rust-env-rs for all new work.
 ---
 
-# devenv-rs — Rust devenv Configuration (ALWAYS LOADED via lele-rs)
+# devenv-rs-legacy — Rust devenv Configuration (LEGACY, opt-in)
 
-Reproducible Rust environment via `devenv` (Nix). This skill is Rust-only; for other languages extend `devenv` generically. Bound via `lele-rs` indexer — add `~/.config/opencode/skills/devenv-rs/SKILL.md` to `opencode.json: instructions[]` alongside `lele-rs`.
+**Superseded by `rust-env-rs`.** Use this skill only for the crates that still ship
+`devenv.nix`/`devenv.yaml`. New repos use `rust-toolchain.toml` + `just` + `.githooks` instead.
+
+Reproducible Rust environment via `devenv` (Nix). This skill is Rust-only; for other languages extend `devenv` generically. This skill is denied by default (name ends `-legacy`, not matched by any allow glob) — a project must add an exact `{ "action": "skill", "resource": "devenv-rs-legacy", "effect": "allow" }` rule to load it.
 
 ## 1. Scaffold
 
@@ -110,9 +113,9 @@ tasks = {
   "lele:clippy" = { exec = "cargo clippy --all-targets --all-features -- -D warnings"; showOutput = true; };
   "lele:fmt" = { exec = "cargo fmt -- --check"; showOutput = true; };
   "lele:nextest" = { exec = "cargo nextest run --all-targets --all-features"; showOutput = true; };
-  "lele:lint" = { exec = "cargo run --manifest-path ../lele_lint/Cargo.toml"; showOutput = true; };
-  "lele:taxonomy_check" = { exec = "cargo run --manifest-path ../lele_function_taxonomy/Cargo.toml --features rustc-private -- --manifest-path ./Cargo.toml"; showOutput = true; };
-  "freenet:contract-harness" = { exec = "cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture"; showOutput = true; };
+  "lele:lint" = { exec = "lele-lint --config lele.toml"; showOutput = true; };
+  "lele:taxonomy_check" = { exec = "lele-function-taxonomy --manifest-path ./Cargo.toml"; showOutput = true; };
+  "freenet:contract-harness" = { exec = "cargo nextest run --manifest-path <harness-repo>/Cargo.toml -- --nocapture"; showOutput = true; };
   # no after, no verify sink — each leaf does one job; use a single CI exec if chaining is needed
 };
 ```

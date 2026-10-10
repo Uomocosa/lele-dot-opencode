@@ -26,9 +26,10 @@ batch: once to approve the plan, once to advance. **Never auto-carry into the ne
 2. Per crate: if its `Cargo.toml` depends on a tool with a skill (`bevy-rs`, `serde-rs`, `clap-rs`,
    `jiff-rs`, `rayon-rs`, `criterion-rs`, `itertools-rs`, `reqwest-rs`, or a bare tool `libp2p` /
    `freenet` / `pixi`), load it.
-3. `devenv-rs` when touching `devenv.nix` or task definitions.
-4. Read `<crate>/devenv.nix` FIRST for every crate under review — its `lele:*` tasks are the
-   canonical verifiers.
+3. `rust-env-rs` when touching `rust-toolchain.toml`, `justfile`, `.githooks`, `.cargo/config.toml`
+   (legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`).
+4. Read the repo's `justfile` FIRST for every repo under review — its recipes are the
+   canonical verifiers (legacy: `<crate>/devenv.nix` `lele:*` tasks).
 5. Audit each crate's `src/` against the loaded rule sets. Record every finding as
    `crate | file:line | rule | proposed change`.
 
@@ -50,9 +51,9 @@ Do **NOT** edit anything yet. Wait for the user's reply.
   mechanical / lint-enforced (`E0xx`) → structural → design / judgement.
 - Re-show the batch's before/after snippets (per the global snippet rule), then apply only that batch.
 - Then verify **EVERY** crate under review — not just the edited one:
-  - `[[AGENTS.md::RUN_ALL_TESTS]]` per crate, or per-crate devenv tasks
-    (`devenv tasks run <crate>:clippy|nextest|lint 2>&1`).
-  - Never pipe `devenv tasks run` to `| tail` / `| head`; always append `2>&1`.
+  - `just build|clippy|fmt|test|lint` per repo (`[[AGENTS.md::RUN_ALL_TESTS]]`), or raw
+    `cargo …` when no `justfile` exists (legacy: `devenv tasks run <crate>:clippy|nextest|lint 2>&1`).
+  - Never pipe a task runner (`just`, `devenv tasks run`) to `| tail` / `| head`; always append `2>&1`.
 - If red: **STOP**, fix only this batch, re-run. Never advance on red.
 
 ## Phase 4 — All-green gate → explicit next-batch prompt (MANDATORY STOP)

@@ -1,6 +1,6 @@
 # RATIONALE — the rules `lele_lint` cannot check
 
-`lele_lint` covers mechanical shape (`E0xx`, see `../lele_lint/RULES.md`). The rules
+`lele_lint` covers mechanical shape (`E0xx`, see the repo's `RULES.md`). The rules
 below are judgement: read them before designing, not before linting. Each names the
 lele rule that enforces part of it, or says "judgement only".
 

@@ -1,0 +1,12 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+# Preferred non-Nix task runner (see the rust-env-rs skill).
+# In a workspace, run the linter once per crate: lele-lint --config lele.toml crates/<name>.
+
+build:  ; cargo build --all-targets --all-features
+clippy: ; cargo clippy --all-targets --all-features -- -D warnings
+fmt:    ; cargo fmt -- --check
+test:   ; cargo nextest run --all-targets --all-features
+lint:   ; lele-lint --config lele.toml .
+hooks:  ; git config core.hooksPath .githooks && chmod +x .githooks/*
+ci: build fmt clippy test

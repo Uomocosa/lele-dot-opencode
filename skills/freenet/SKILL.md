@@ -37,14 +37,15 @@ suite (CRDT laws, four-function wiring, rejection safety, Broken-flag liveness) 
 state/merge so a bad contract fails fast instead of silently splitting on mainnet.
 
 ```bash
-devenv tasks run freenet:contract-harness 2>&1
-# or, from a crate dir:
-cargo test --manifest-path ../freenet_contract_harness/Cargo.toml -- --nocapture
+# harness is its own repo: github.com/Uomocosa/freenet-contract-harness
+cargo nextest run --manifest-path ../freenet-contract-harness/Cargo.toml -- --nocapture
+# consuming crate: add it as a dev-dependency (git + tag) and call `run_suite`
 ```
 
-Freenet crates are expected to also wire `freenet:run-local-mainnet` / `freenet:run-cross-os`
-(`lele_enforce_config` requires them). See `references/reconciliation-and-scaling.md` §test-suite
-for the generator-based suite to parameterize (`gen_state()` / `gen_update()`).
+Freenet crates also wire local/cross-OS end-to-end recipes (`just harness`, `just contract`); there
+is no floor-task checker (`lele_enforce_config` is retired). See
+`references/reconciliation-and-scaling.md` §test-suite for the generator-based suite to parameterize
+(`gen_state()` / `gen_update()`).
 
 ## Gotchas (the non-obvious parts)
 
@@ -75,7 +76,8 @@ Ok(UpdateModification::valid(serialize(&v)?))  Ok(UpdateModification::valid(seri
   unexpected variants.
 - **WebSocket connect can hang** — wrap `connect_async` in `tokio::time::timeout(5s, …)`.
 - **`tikv-jemalloc-sys` fails on a path with spaces** — keep the full `freenet` crate in
-  `[dev-dependencies]` by default.
+  `[dev-dependencies]` by default, and set `[build] target-dir = "/tmp/frt-build"` (with `jobs = 6`)
+  in `.cargo/config.toml` so the build happens off the space-containing path.
 - **Node roles / "they discover each other via Freenet":** peers share routing only when they join
   the *same ring*. Isolated gateways each seed a disjoint ring and can never see each other. Load
   `references/ring-and-discovery.md` before spawning/wiring nodes.

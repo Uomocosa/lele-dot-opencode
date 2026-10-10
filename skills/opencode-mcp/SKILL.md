@@ -115,5 +115,5 @@ If `permission.skill` is also needed (e.g., `definition-*`, `opencode-*`), keep 
 
 ## 7. When NOT to Use
 
-* Project-specific tool wiring — use `devenv-rs` or crate-level config instead.
+* Project-specific tool wiring — use `rust-env-rs` or crate-level config instead.
 * Skill definitions (`definition-*`) — those are permissions, not MCP.
