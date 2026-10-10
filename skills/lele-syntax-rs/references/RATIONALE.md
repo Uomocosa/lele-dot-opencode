@@ -188,3 +188,68 @@ invariant gets `TryFrom`/`FromStr` instead (§5) and never derives `From`. Do no
 Judgement only; not enforced. The newtype shape itself is **E018**.
 
 Ref: [derive_more `From`](https://docs.rs/derive_more/2.1.1/derive_more/derive.From.html).
+
+## 10. State machines — the Rust shape
+
+The concrete Rust realization of §3 (functional core) and the taxonomy. A domain that models a
+protocol or session as a machine keeps it in one folder, `{{domain}}::state_machine`:
+
+- **`State`** — `state.rs`, `pub struct State`. Fields are data only: no `outputs` field, no I/O
+  handles, no clock. Time and dependencies arrive as parameters.
+- **`Input` / `Output`** — `__basic__/enums.rs`, `pub enum Input { ... }` (every event in) and
+  `pub enum Output { ... }` (every effect out; e.g. `Notify(Event)` + `NetCommand(NetCommand)`).
+- **`update`** — `update.rs`, the single entrypoint:
+  `pub fn update(state: &mut State, input: Input, now: EpochSecs) -> Vec<Output>`.
+- **Every transition returns its outputs.** `handle_command`, `handle_net_event`, `handle_lobby`,
+  `tick`, `dial_candidates`, `send_hello`, ... are all `... -> Vec<Output>` (or `-> Output` for an
+  always-single effect). A `outputs: &mut Vec<Output>` parameter is **not** used.
+- **Pure readers return values**, not outputs: `fn snapshot(&State) -> Snapshot`,
+  `fn hello(&State) -> Hello`, `fn publish_target(&State) -> Option<PublishTarget>`.
+- **Other types are allowed** inside `state_machine/` (per-domain enums/structs such as `Hello`,
+  `PublishTarget`) — only `State`/`Input`/`Output`/`update` are fixed.
+- The folder stays an honest boundary: a `[[lele.boundary]]` with `require = "honest"` and
+  `cannot_use = ["tokio", "libp2p", "bevy", "std::net", "std::fs", "std::time"]`.
+
+Worked example: `freenet_libp2p_bevy_plugin/src/discovery/state_machine/`. Language-agnostic
+rules: `definition-state-machine`.
+
+Judgement only. A `lele_lint` rule could later enforce "a `state_machine/` folder has `state.rs`
++ `update.rs` and no `&mut Vec<Output>` transition parameter" — add it if the pattern recurs.
+
+## 11. Recursion lives in an inner `fn`
+
+A function that must walk a tree should not recurse as the public function, and should not thread
+an accumulator **and** a behaviour parameter through its public signature. Put the walk in an
+inner `fn recursion(...)` declared inside the public function; the public function owns the
+accumulator, calls `recursion` once, and returns it.
+
+```rust
+pub fn matching_names(root: &Node, keep: impl Fn(&str) -> bool) -> Vec<String> {
+    fn recursion(node: &Node, keep: &impl Fn(&str) -> bool, out: &mut Vec<String>) {
+        if keep(&node.name) {
+            out.push(node.name.clone());
+        }
+        for child in &node.children {
+            recursion(child, keep, out);
+        }
+    }
+
+    let mut out = Vec::new();
+    recursion(root, &keep, &mut out);
+    out
+}
+```
+
+**Why:** the public signature stays "behaviour in, output out" (`impl Fn(&str) -> bool` →
+`Vec<String>`) instead of leaking the recursion's `&mut` accumulator or its `&keep` borrow. An
+inner `fn` cannot capture its environment, so it must take everything it needs — including
+`&keep` — as parameters; that is the point: what the recursion needs is visible in its own
+signature, the caller-facing API is not. When one inner step differs between callers, pass that
+step as the behaviour parameter (§1).
+
+**Limits:** use this for genuinely tree-shaped walks. A flat scan is clearer as a `for`/iterator;
+a graph that can revisit nodes needs an explicit stack/queue plus a visited set — follow the data
+structure. E015 counts only top-level functions, and no `E0xx` rule descends into a function body,
+so the inner `recursion` is invisible to the linter and needs **no** `// needed helper:` marker.
+
+Judgement only; not enforced.

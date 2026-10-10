@@ -52,6 +52,8 @@ pub fn increment(counter: &mut ClickCounter) {
 - **Errors.** `thiserror` enums; never `unwrap`/`expect`/`panic`.
 - **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`).
 - **No comments** in `src/`/`methods/` except `// needed helper: <why>` and the test opt-out.
+- **Recursion.** A tree walk lives in an inner `fn recursion(...)` inside its public function;
+  the public function owns the accumulator and returns it (RATIONALE §11).
 
 ## 2. Working with the linter
 
