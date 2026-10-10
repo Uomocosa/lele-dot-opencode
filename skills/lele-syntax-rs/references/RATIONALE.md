@@ -253,3 +253,37 @@ structure. E015 counts only top-level functions, and no `E0xx` rule descends int
 so the inner `recursion` is invisible to the linter and needs **no** `// needed helper:` marker.
 
 Judgement only; not enforced.
+
+## 12. When a newtype earns its place — and why `PathBuf` usually doesn't
+
+A newtype wraps one scalar to make an implicit meaning explicit: `Milliseconds(u64)`,
+`Username(String)`. It earns its place when the underlying type is **untyped enough that the
+domain meaning is lost** — a bare `u64` could be bytes, seconds or a count; a bare `String`
+could be a name, a token or free text. The newtype says which.
+
+`PathBuf`/`Path` is different: the underlying type is **already the domain abstraction**. It
+means "a file or directory on this machine" and nothing else, so wrapping it purely to restate
+that ("`ScanFolder(PathBuf)` so you know it's a folder") adds a name without removing an
+ambiguity. This is SMELLS S1 read the other way: for paths, `PathBuf`/`&Path` is already the
+narrowest honest type.
+
+A newtype over a path still earns its place for the two things a bare path cannot express —
+an **invariant** or a **role**, never a restatement:
+
+```rust
+// BAD — restates "this is a path"; the reader already knows from `PathBuf`
+pub struct ConfigPath(pub PathBuf);
+
+// GOOD — an invariant the path itself does not carry (built only after the check)
+pub struct ExistingDir(pub PathBuf);
+
+// GOOD — a role, so two paths cannot be swapped at a call site
+pub fn copy(from: Source, to: Destination) { /* … */ }
+```
+
+The same test applies to every wrapped type, `String` and integers included: wrap to carry an
+**invariant** or a **role**, never just a synonym. `Milliseconds(u64)` and `Username(String)`
+pass because the bare type was ambiguous; `ScanFolder(PathBuf)` fails because `PathBuf` was not.
+
+Judgement only; not enforced. The newtype shape itself is **E018**; primitive obsession is
+**SMELLS S1**; the invariant-constructor is **§5**; the infallible `From` is **§9**.

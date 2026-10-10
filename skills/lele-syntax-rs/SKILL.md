@@ -54,6 +54,8 @@ pub fn increment(counter: &mut ClickCounter) {
 - **No comments** in `src/`/`methods/` except `// needed helper: <why>` and the test opt-out.
 - **Recursion.** A tree walk lives in an inner `fn recursion(...)` inside its public function;
   the public function owns the accumulator and returns it (RATIONALE §11).
+- **Newtype purpose.** Wrap a scalar to carry an *invariant* or a *role*, never a synonym; a
+  path (`PathBuf`) is already typed, so don't wrap it just to restate that (RATIONALE §12).
 
 ## 2. Working with the linter
 
