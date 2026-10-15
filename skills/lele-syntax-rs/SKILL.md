@@ -42,7 +42,7 @@ pub fn increment(counter: &mut ClickCounter) {
   `super::` is allowed only inside `#[cfg(test)]`; `crate::` appears only in `use` items.
 - **Struct shape.** Exactly one field means a tuple newtype with `#[derive(Deref)]`, read
   through deref; two or more means named fields. Positional `.0` is banned. A newtype
-  wraps one **scalar** value; it never wraps a collection (E028) — a collection is held
+  wraps one **scalar** value; it never wraps a collection (`no_collection_newtype`) — a collection is held
   directly as a field. A type alias only earns its place when the underlying type is long
   or noisy (`type ModuleInfoMap = HashMap<PathBuf, ModuleInfo>;`); aliasing a short type
   (`type Entries = Vec<Entry>;`) is just repetition. Alias → name a long type only;
@@ -65,13 +65,13 @@ just lint                 # or: lele-lint --config lele.toml <crate>
 
 - Install the linter from `github.com/Uomocosa/lele-rust-linter`; in a workspace run it once per
   crate (`lele-lint --config lele.toml crates/<name>`).
-- Every finding is an error with a code. Explain one with `lele-lint --explain E0xx`
+- Every finding is an error with a code. Explain one with `lele-lint --explain <name-or-code>`
   (prints the rule with a bad/good example).
 - `RULES.md` is per-repo (`crates/lele-lint/RULES.md`); never copy rule text here.
 - One root `lele.toml` + `clippy.toml` per workspace; boundary `folders` are workspace-relative
   (the config file's directory is the base).
 - `--sync-methods` (or `just sync-methods`) regenerates the `methods/mod.rs` indexes after you add delegates.
-- A `[[lele.boundary]]` has two checks: imports (`cannot_use`; E036) and honesty
+- A `[[lele.boundary]]` has two checks: imports (`cannot_use`; `boundary_imports`) and honesty
   (`require = "honest"`; `lele_function_taxonomy`). Ubiquitous language is guidance
   only — the linter does not check names.
 

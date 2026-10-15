@@ -1,6 +1,6 @@
 # RATIONALE — the rules `lele_lint` cannot check
 
-`lele_lint` covers mechanical shape (`E0xx`, see the repo's `RULES.md`). The rules
+`lele_lint` covers mechanical shape (each rule has a code and a section in the repo's `RULES.md`). The rules
 below are judgement: read them before designing, not before linting. Each names the
 lele rule that enforces part of it, or says "judgement only".
 
@@ -25,7 +25,7 @@ fn apply(items: &mut [Item], strategy: impl Fn(&mut Item)) {
 }
 ```
 
-Enforced in part by **E015 `helper_count`** (one public function per file, at most two
+Enforced in part by **`helper_count`** (one public function per file, at most two
 unnamed private helpers). Everything else is judgement.
 
 Refs: Fowler, [Extract Function](https://refactoring.com/catalog/extractFunction.html) and
@@ -42,8 +42,8 @@ functions, fields. When a synonym creeps in, rename to the canonical word. State
 canonical term and a one-line domain definition in the crate's own docs, and list the
 synonyms you have seen drifting in.
 
-This one is **guidance, not a lint**: `lele_lint` cannot check it. An earlier `E035
-vocabulary` rule tried, matching banned words as contiguous sub-words of every declared
+This one is **guidance, not a lint**: `lele_lint` cannot check it. An earlier `vocabulary`
+rule tried, matching banned words as contiguous sub-words of every declared
 identifier and path component — so `banned = ["index"]` flagged `snapshot_index` and
 `peer_index`, which have nothing to do with the concept. It was retired (2026-10-04);
 `[[lele.vocabulary]]` is no longer part of `lele.toml`.
@@ -58,11 +58,11 @@ Ref: Fowler, [UbiquitousLanguage](https://martinfowler.com/bliki/UbiquitousLangu
 Put the decisions in a pure core that receives inputs and returns outputs/commands, and
 keep I/O, clocks, sockets and frameworks in a thin shell that drives the core and executes
 its commands. Core folders are named after the domain; adapter folders are named after
-the technology they talk to. A `[[lele.boundary]]` has **two** checks: lele_lint **E036**
+the technology they talk to. A `[[lele.boundary]]` has **two** checks: lele_lint **`boundary_imports`**
 forbids the imports in `cannot_use`, and `lele_function_taxonomy` proves the folder's
 functions are honest (`require = "honest"` — no hidden I/O reached through local calls).
 
-Enforced by **E036** (imports) and the taxonomy (honesty).
+Enforced by **`boundary_imports`** (imports) and the taxonomy (honesty).
 
 Refs: Gary Bernhardt, [Boundaries](https://www.destroyallsoftware.com/talks/boundaries);
 Firezone, [sans-IO](https://www.firezone.dev/blog/sans-io);
@@ -77,7 +77,7 @@ deliberate exceptions in this workspace are `methods/` (hide delegate bodies unt
 are needed), `__basic__/` (behaviour-free types do not each need a file and a test), and
 `bevy_systems/` (all systems of a domain are found in one place).
 
-Judgement only; the folder shape rules (**E001**, **E017**, **E040**) enforce the mechanics.
+Judgement only; the folder shape rules (**`atomic_file`**, **`method_file_co_location`**, **`container_placement`**) enforce the mechanics.
 
 Ref: Robert C. Martin, [Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html).
 
@@ -100,7 +100,7 @@ impl TryFrom<u16> for Port {
 }
 ```
 
-Judgement only; not enforced. The Rust shape of the newtype is **E018**.
+Judgement only; not enforced. The Rust shape of the newtype is **`single_field_newtype`**.
 
 Ref: Alexis King, [Parse, don't validate](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/).
 
@@ -129,17 +129,17 @@ Refs: Serenity/JS, [Screenplay Pattern](https://serenity-js.org/handbook/design/
 - **snapshot / golden test** — asserts exact output against a checked-in file.
 - **property-based test** — asserts an invariant over generated inputs.
 
-Enforced in part by **E007** (inline tests only), **E034** (no tests in `__basic__/`), and
-**E006** (`test_usage` every file).
+Enforced in part by **`test_inline`** (inline tests only), **`no_dunder_tests`** (no tests in `__basic__/`), and
+**`test_usage`** (every file).
 
 ## 8. Dummy `Default` for process handles
 
 A struct that owns a spawned handle (`std::process::Child`, a socket, a task) cannot
-`spawn().unwrap()` in `Default` — this workspace denies `unwrap`/`expect`/`panic` (E021).
+`spawn().unwrap()` in `Default` — this workspace denies `unwrap`/`expect`/`panic` (the `clippy_config_cargo` lint set).
 Prefer `Option<Child>` with `Default => None` and handle `Some` at the call site. Only add
 `#[allow(clippy::unwrap_used)]` with explicit user approval (see SKILL.md §3).
 
-Judgement only; the lint gate is enforced by **E021**.
+Judgement only; the lint gate is enforced by **`clippy_config_cargo`**.
 
 ## 9. Constructors come from `derive_more::From`
 
@@ -188,7 +188,7 @@ deriving it on a checked newtype hands every caller a way around the check. A ty
 invariant gets `TryFrom`/`FromStr` instead (§5) and never derives `From`. Do not derive
 `From` speculatively either: add it when a caller needs the conversion.
 
-Judgement only; not enforced. The newtype shape itself is **E018**.
+Judgement only; not enforced. The newtype shape itself is **`single_field_newtype`**.
 
 Ref: [derive_more `From`](https://docs.rs/derive_more/2.1.1/derive_more/derive.From.html).
 
@@ -252,7 +252,7 @@ step as the behaviour parameter (§1).
 
 **Limits:** use this for genuinely tree-shaped walks. A flat scan is clearer as a `for`/iterator;
 a graph that can revisit nodes needs an explicit stack/queue plus a visited set — follow the data
-structure. E015 counts only top-level functions, and no `E0xx` rule descends into a function body,
+structure. `helper_count` counts only top-level functions, and no rule descends into a function body,
 so the inner `recursion` is invisible to the linter and needs **no** `// needed helper:` marker.
 
 Judgement only; not enforced.
@@ -288,7 +288,7 @@ The same test applies to every wrapped type, `String` and integers included: wra
 **invariant** or a **role**, never just a synonym. `Milliseconds(u64)` and `Username(String)`
 pass because the bare type was ambiguous; `ScanFolder(PathBuf)` fails because `PathBuf` was not.
 
-Judgement only; not enforced. The newtype shape itself is **E018**; primitive obsession is
+Judgement only; not enforced. The newtype shape itself is **`single_field_newtype`**; primitive obsession is
 **SMELLS S1**; the invariant-constructor is **§5**; the infallible `From` is **§9**.
 
 The same test rules out multi-field tuples as data carriers: a `(PathBuf, String, String)` is a

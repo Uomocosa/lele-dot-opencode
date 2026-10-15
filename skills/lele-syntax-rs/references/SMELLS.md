@@ -2,11 +2,11 @@
 
 Judgement only, with bad/good examples. The charter is in `SKILL.md` §4: read a definition
 and ask *"does it let me understand what this represents?"* Anything mechanically
-checkable belongs in `lele_lint` (`E0xx`), not here.
+checkable belongs in `lele_lint`, not here.
 
-Every example is **E018-conformant**: one field is a tuple newtype (`#[derive(Deref)]`),
-two or more are named fields. A newtype wraps a single **scalar** value (E018) and never a
-collection (E028); a collection is held directly — as a field, argument, or return type. A
+Every example is **`single_field_newtype`-conformant**: one field is a tuple newtype (`#[derive(Deref)]`),
+two or more are named fields. A newtype wraps a single **scalar** value (`single_field_newtype`) and never a
+collection (`no_collection_newtype`); a collection is held directly — as a field, argument, or return type. A
 type alias only earns its place for a long or noisy underlying type (e.g.
 `HashMap<PathBuf, ModuleInfo>`), never for a short one like `Vec<Entry>`.
 
@@ -32,7 +32,7 @@ struct Report {
 }
 ```
 
-Judgement only; the newtype shape is **E018**. Related: RATIONALE §5 parse, don't validate.
+Judgement only; the newtype shape is **`single_field_newtype`**. Related: RATIONALE §5 parse, don't validate.
 Ref: Fowler, [Primitive Obsession](https://refactoring.guru/smells/primitive-obsession).
 
 ## S2. Boolean blindness
@@ -131,6 +131,6 @@ struct RenderedState {
 }
 ```
 
-Judgement only. Field **access** is **E009**, and the named-field shape is **E018**. Note E009
+Judgement only. Field **access** is **`no_positional`**, and the named-field shape is **`single_field_newtype`**. Note `no_positional`
 cannot see inside `assert!`/`assert_eq!` macro bodies, so positional access hidden there is on
 you. Related: RATIONALE §12.

@@ -2,22 +2,22 @@
 
 Two variants:
 
-- **Non-Nix (preferred)** — `rust-toolchain.toml` + `justfile` + `.githooks` + `.cargo/config.toml`.
+- **Non-Nix (preferred)** — `rust-toolchain.toml` + `justfile` + `prek.toml` + `.cargo/config.toml`.
   See the `rust-env-rs` skill.
 - **Nix/devenv (legacy, opt-in)** — `devenv.nix` + `devenv.yaml`. See the `devenv-rs-legacy` skill.
 
 Copy these files to a crate (or workspace) root, replacing `<crate>` with the crate name:
 
-- `Cargo.toml` — edition 2024, full `lints.clippy` (E021), pinned `=version` deps. In a workspace,
+- `Cargo.toml` — edition 2024, full `lints.clippy` (`clippy_config_cargo`), pinned `=version` deps. In a workspace,
   move `[profile.*]` and `[workspace.dependencies]` to the root `Cargo.toml` and use `dep.workspace = true`.
-- `clippy.toml` — 4 `allow-*-in-tests` (E022); one per workspace root.
+- `clippy.toml` — 4 `allow-*-in-tests` (`clippy_config_clippy`); one per workspace root.
 - `lele.toml` — honesty defaults + boundary examples; one per workspace root. Boundary `folders` are
   workspace-relative (crate-relative only when the crate is the repo root).
 - `rust-toolchain.toml` — nightly channel + components (add `targets = ["wasm32-unknown-unknown"]` for freenet).
-- `justfile` — `build`/`clippy`/`fmt`/`test`/`lint`/`hooks`/`ci` recipes (replaces `devenv tasks`).
-- `.githooks/pre-commit` — composes the `just` recipes; install with `just hooks` (`core.hooksPath`).
+- `justfile` — `build`/`clippy`/`fmt`/`test`/`lint`/`setup`/`check`/`ci` recipes (replaces `devenv tasks`).
+- `prek.toml` — `repo: local` hooks that invoke the `just` recipes; install with `just setup`, run with `just check`.
 - `.cargo/config.toml` — optional `[build] target-dir` (space-in-path) + `jobs`.
-- `src/lib.rs` / `src/hello.rs` — minimal demo for the E018 `Deref` newtype.
+- `src/lib.rs` / `src/hello.rs` — minimal demo for the `single_field_newtype` `Deref` newtype.
 - `.gitignore` — `target/`, `.devenv/`, etc.
 - **(legacy)** `devenv.nix` / `devenv.yaml` — only for crates that still use Nix.
 

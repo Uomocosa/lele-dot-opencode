@@ -6,7 +6,7 @@ description: LEGACY (Nix/devenv). Load ONLY when a crate still has devenv.nix/de
 # devenv-rs-legacy — Rust devenv Configuration (LEGACY, opt-in)
 
 **Superseded by `rust-env-rs`.** Use this skill only for the crates that still ship
-`devenv.nix`/`devenv.yaml`. New repos use `rust-toolchain.toml` + `just` + `.githooks` instead.
+`devenv.nix`/`devenv.yaml`. New repos use `rust-toolchain.toml` + `just` + `prek` instead.
 
 Reproducible Rust environment via `devenv` (Nix). This skill is Rust-only; for other languages extend `devenv` generically. This skill is denied by default (name ends `-legacy`, not matched by any allow glob) — a project must add an exact `{ "action": "skill", "resource": "devenv-rs-legacy", "effect": "allow" }` rule to load it.
 

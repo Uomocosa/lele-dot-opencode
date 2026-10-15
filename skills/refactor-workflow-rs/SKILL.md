@@ -26,7 +26,7 @@ batch: once to approve the plan, once to advance. **Never auto-carry into the ne
 2. Per crate: if its `Cargo.toml` depends on a tool with a skill (`bevy-rs`, `serde-rs`, `clap-rs`,
    `jiff-rs`, `rayon-rs`, `criterion-rs`, `itertools-rs`, `reqwest-rs`, or a bare tool `libp2p` /
    `freenet` / `pixi`), load it.
-3. `rust-env-rs` when touching `rust-toolchain.toml`, `justfile`, `.githooks`, `.cargo/config.toml`
+3. `rust-env-rs` when touching `rust-toolchain.toml`, `justfile`, `prek.toml`, `.cargo/config.toml`
    (legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`).
 4. Read the repo's `justfile` FIRST for every repo under review — its recipes are the
    canonical verifiers (legacy: `<crate>/devenv.nix` `lele:*` tasks).

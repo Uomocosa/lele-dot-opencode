@@ -116,7 +116,7 @@ pub fn increment(state: &mut {{module}}::ClickerState, amount: u64) {
 ## Notes
 
 - Compose plugins as a tuple: `app.add_plugins((p2p::Plugin::new(cfg), sync::Plugin));`.
-- `lele_bevy_lint` is authoritative for the Bevy-specific rules: run `just bevy-lint`
-  (codes E005/E008/E029/E037/E038/E039) or `lele-bevy-lint --explain E0xx` (installed from
+- `lele-bevy-lint` is authoritative for the Bevy-specific rules: run `just bevy-lint`, or
+  `lele-bevy-lint --checker-list` / `--explain <name>` (installed from
   `github.com/Uomocosa/lele-rust-linter`). See the `bevy-ui-preview` skill for the UI preview
-  rules (E029/E037/E038/E039), the `lele_bevy_preview` scene DSL and the test template.
+  rules, the `lele_bevy_preview` scene DSL and the test template.

@@ -1,6 +1,6 @@
 ---
 name: lele-rs
-description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, rust-env-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, E018/Deref, domain imports, thiserror, test_usage, and reproducible Rust environments.
+description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, rust-env-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, single_field_newtype/Deref, domain imports, thiserror, test_usage, and reproducible Rust environments.
 ---
 
 # lele-rs — Rust Stack Indexer (ALWAYS LOADED)
@@ -42,7 +42,7 @@ signature. It exits instantly when no honest boundary is configured (so most cra
    rules; the full list is generated into `lele_lint/RULES.md`, and `lele_lint --explain E0xx`
    prints one rule with a bad/good example (`--checker-list` lists checkers). Judgement rules
    the linter cannot check live in `lele-syntax-rs/references/RATIONALE.md`.
-3. `rust-env-rs` — when touching `rust-toolchain.toml`, `justfile`, `.githooks`, `.cargo/config.toml`, or the workspace/`lele.toml` layout. Legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`.
+3. `rust-env-rs` — when touching `rust-toolchain.toml`, `justfile`, `prek.toml`, `.cargo/config.toml`, or the workspace/`lele.toml` layout. Legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`.
 4. Domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...) — when the crate depends on that engine/protocol.
 
 ## Global Config Placement
@@ -71,18 +71,18 @@ Path with spaces (e.g. `[AAI] Agentic AI`): set `[build] target-dir = "/tmp/frt-
 
 If `cargo clippy --all-targets --all-features -- -D warnings` surfaces a `clippy::pedantic` or `clippy::nursery` lint:
 
-1. Report the exact lint + `file:line` (`Cargo.toml: E021` / `clippy.toml: E022` context).
+1. Report the exact lint + `file:line` (`Cargo.toml` / `clippy.toml` context).
 2. Propose the minimal fix: rewrite the code (`checked_add`, `try_from`, `Ipv4Addr::LOCALHOST`, `if let` vs `match`, etc.) as first choice; `#[allow]` only as last resort.
 3. **Stop and ask the user** — do not insert `#[allow]` unless the user explicitly says “allow X at Y”. The user gates all existing `#[allow]` for usefulness and will remove any deemed useless.
 4. Existing `#[allow]` in the codebase are not to be broadened or copied to new sites without the same explicit approval — flag them for review instead.
 
-Rationale: `E021` forces `pedantic=deny` + `nursery=deny`; per-site `allow` defeats the deny. Only the user decides which pedantic/nursery lints are noise for this workspace. This gate also applies to file-level `#![allow]` and `Cargo.toml` global `allow` overrides — both need explicit user approval.
+Rationale: `clippy_config_cargo` forces `pedantic=deny` + `nursery=deny`; per-site `allow` defeats the deny. Only the user decides which pedantic/nursery lints are noise for this workspace. This gate also applies to file-level `#![allow]` and `Cargo.toml` global `allow` overrides — both need explicit user approval.
 
 ## Lele Config Enforcement
 
 `lele_enforce_config` and `lele_hook_resync` are retired (2026-10-10) — there is no floor-task
 checker and no combined hook config. Config is a single `lele.toml` at the workspace root, consumed
-via `lele-lint --config lele.toml <crate>`; the `justfile` + `.githooks` are the source of truth for
+via `lele-lint --config lele.toml <crate>`; the `justfile` (tasks) + `prek.toml` (gates) are the source of truth for
 tasks and gates. The canonical template is at
 `~/.config/opencode/skills/lele-rs/references/lele-rust-config/`; the freenet overlay is in the
 `freenet` skill.

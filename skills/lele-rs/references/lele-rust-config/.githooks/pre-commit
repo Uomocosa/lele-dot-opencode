@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-set -eu
-just fmt
-just clippy
-just lint
-just test
