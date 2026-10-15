@@ -48,6 +48,9 @@ identifier and path component — so `banned = ["index"]` flagged `snapshot_inde
 `peer_index`, which have nothing to do with the concept. It was retired (2026-10-04);
 `[[lele.vocabulary]]` is no longer part of `lele.toml`.
 
+A `bool`'s name is the question it answers: `is_*` / `has_*` / `can_*` / `should_*`,
+never a bare noun (`is_highlighted`, not `highlighted`).
+
 Ref: Fowler, [UbiquitousLanguage](https://martinfowler.com/bliki/UbiquitousLanguage.html).
 
 ## 3. Functional core, imperative shell (Sans-IO, ports and adapters)
@@ -287,3 +290,6 @@ pass because the bare type was ambiguous; `ScanFolder(PathBuf)` fails because `P
 
 Judgement only; not enforced. The newtype shape itself is **E018**; primitive obsession is
 **SMELLS S1**; the invariant-constructor is **§5**; the infallible `From` is **§9**.
+
+The same test rules out multi-field tuples as data carriers: a `(PathBuf, String, String)` is a
+positional type one call site must decode by position — see **SMELLS S4**.

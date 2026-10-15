@@ -59,6 +59,18 @@ struct Job {
 }
 ```
 
+A `bool` is a yes/no question, so its name must read as one — `is_*`, `has_*`,
+`can_*`, `should_*` — never a bare noun or state adjective. The reader must be able
+to answer "true means …" from the name alone.
+
+```rust
+// BAD — a state, not a question
+struct Row { visible: bool }
+
+// GOOD — the name is the question the value answers
+struct Row { is_visible: bool }
+```
+
 Judgement only.
 Ref: Robert Harper, [Boolean Blindness](https://existentialtype.wordpress.com/2011/03/15/boolean-blindness/).
 
@@ -99,3 +111,26 @@ Judgement only.
 Refs: Jon Skeet, [Anti-pattern: parallel collections](https://codeblog.jonskeet.uk/2014/06/03/anti-pattern-parallel-collections/);
 [Make illegal states unrepresentable](https://corrode.dev/blog/illegal-state/);
 Wlaschin, [Designing with types](https://fsharpforfunandprofit.com/series/designing-with-types/).
+
+## S4. Data parked in a tuple
+
+A tuple with two or more fields is a positional type: the reader must remember the order to
+know what `.0` and `.1` mean. Name it.
+
+```rust
+// BAD — every call site must know that .0 is the path, .1 the label, .2 the hash
+fn render_states(scene: &Scene) -> Vec<(PathBuf, String, String)> { /* … */ }
+
+for (path, label, pixels) in &rendered { /* … */ }
+
+// GOOD — the field names are the documentation
+struct RenderedState {
+    path: PathBuf,
+    label: String,
+    pixel_hash: String,
+}
+```
+
+Judgement only. Field **access** is **E009**, and the named-field shape is **E018**. Note E009
+cannot see inside `assert!`/`assert_eq!` macro bodies, so positional access hidden there is on
+you. Related: RATIONALE §12.
