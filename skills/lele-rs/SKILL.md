@@ -1,9 +1,15 @@
 ---
 name: lele-rs
-description: Use for ANY Rust work in this workspace. Always-loaded indexer - binds lele-syntax-rs, rust-env-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, single_field_newtype/Deref, domain imports, thiserror, test_usage, and reproducible Rust environments.
+description: Use for ANY Rust work in this workspace. Load lele-syntax-rs first, then read its references/RATIONALE.md + references/SMELLS.md in full before naming/designing/reviewing/editing Rust. Binds lele-syntax-rs, rust-env-rs, bevy-rs, libp2p, freenet and related skills. Enforces atomic files, atomic delegates, single_field_newtype/Deref, domain imports, thiserror, test_usage, and reproducible Rust environments.
 ---
 
 # lele-rs — Rust Stack Indexer (ALWAYS LOADED)
+
+> **MANDATORY — before naming, designing, reviewing, or editing ANY Rust:**
+> load `lele-syntax-rs`, then `read` BOTH
+> `~/.config/opencode/skills/lele-syntax-rs/references/RATIONALE.md` and
+> `~/.config/opencode/skills/lele-syntax-rs/references/SMELLS.md` in full.
+> Loading *this* file is not the gate; the two reads are.
 
 This is the entrypoint for all Rust work. Read this file first, then load the leaf skill that matches your task. v2 has no `instructions[]` binding: `AGENTS.md` is the always-loaded content, and skills are advertised by `description` and loaded on demand via the `skill` tool.
 

@@ -1,9 +1,13 @@
 ---
 name: lele-syntax-rs
-description: Use for Rust code in this project — naming, design review, RATIONALE.md/SMELLS.md, atomic files, LELE0xx/LELEBEVY0xx lint.
+description: Use for Rust code in this project — naming, design review, atomic files, LELE0xx/LELEBEVY0xx lint. Read references/RATIONALE.md and references/SMELLS.md in full before naming/designing/reviewing/editing.
 ---
 
 # lele syntax and architecture
+
+> **MANDATORY FIRST ACTION — before naming, designing, or reviewing anything:**
+> `read` `references/RATIONALE.md` and `references/SMELLS.md` (both, in full).
+> The `skill` tool does not inline them; this file is not a substitute.
 
 `lele_lint` enforces every rule that can be checked; each diagnostic carries a code —
 `LELE0xx` from `lele-lint`, `LELEBEVY0xx` from `lele-bevy-lint` (`lele-lint --checker-list`,

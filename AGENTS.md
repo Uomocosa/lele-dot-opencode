@@ -17,6 +17,21 @@ Before answering any question, proposing a plan, or modifying code:
 When in doubt, load it — an irrelevant skill costs little context; a skipped
 skill costs correctness.
 
+### Rust gate (MUST — non-negotiable, applies to ANY Rust)
+
+Any task that touches Rust — reading, explaining, naming, designing, reviewing,
+or editing, even one line — is gated on completing this BEFORE you answer or edit:
+
+1. load `lele-rs`, then load `lele-syntax-rs`;
+2. `read` BOTH of these **in full** (the `skill` tool does NOT inline them):
+   - `~/.config/opencode/skills/lele-syntax-rs/references/RATIONALE.md`
+   - `~/.config/opencode/skills/lele-syntax-rs/references/SMELLS.md`
+
+Do not name, design, review, or edit Rust before both reads complete. Loading
+`lele-syntax-rs` alone is NOT compliance — those two files are a second hop.
+`lele_lint` enforces only the mechanically checkable rules; the judgement rules
+live ONLY in those two files.
+
 ## Skill Architecture
 
 Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized into three tiers:
