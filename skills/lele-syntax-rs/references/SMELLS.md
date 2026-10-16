@@ -38,9 +38,19 @@ Ref: Fowler, [Primitive Obsession](https://refactoring.guru/smells/primitive-obs
 ## S2. Boolean blindness
 
 A `bool` carries no meaning beyond its value; you must remember its provenance to use it.
-Several `bool` fields that encode one axis leave the reader guessing and make impossible
-combinations representable. Use an enum — or a bitset only when the flags are genuinely
-independent.
+A `bool` **field** is permitted but rare — usually it is derived state or a collapsed enum.
+Before adding or keeping one, walk these three questions:
+
+1. **Is it derivable from the other fields?** If the value follows from the rest of the
+   state, delete the field and expose a **method returning `bool`**. Stored derived state
+   drifts out of sync with its source.
+2. **Are there other `bool` fields on the same axis?** If two or more flags are mutually
+   exclusive or describe one state, replace them with an **enum** — separate `bool`s make
+   impossible combinations (both true, both false) representable. Genuinely independent
+   flags stay separate (a bitset only when there are many); several `bool`s that flip
+   together are usually a flattened state machine (RATIONALE §10).
+3. **Otherwise keep the field** — a single, genuinely independent flag — and name it as the
+   question it answers (RATIONALE §2).
 
 ```rust
 // BAD — two bools on one axis; both-true and both-false are representable
@@ -59,26 +69,25 @@ struct Job {
 }
 ```
 
-A `bool` is a yes/no question, so its name must read as one — `is_*`, `has_*`,
-`can_*`, `should_*` — never a bare noun or state adjective. The reader must be able
-to answer "true means …" from the name alone. A `bool`-returning **function** obeys the
-same rule: question form, not a statement.
-
 ```rust
-// BAD — a state, not a question
-struct Row { visible: bool }
+// BAD — `is_uploaded` follows from `uploaded_at`; two sources of truth that can disagree
+struct Upload {
+    uploaded_at: Option<Timestamp>,
+    is_uploaded: bool,
+}
 
-// GOOD — the name is the question the value answers
-struct Row { is_visible: bool }
+// GOOD — the field is gone; the answer is computed where it is asked
+struct Upload {
+    uploaded_at: Option<Timestamp>,
+}
+
+impl Upload {
+    pub fn is_uploaded(&self) -> bool { self.uploaded_at.is_some() }
+}
 ```
 
-```rust
-// BAD — a statement with an ambiguous subject: does false mean "none", "not all", or "not yet"?
-fn all_see_room(logs: &[PathBuf], room: &str) -> bool { /* … */ }
-
-// GOOD — the name is the question the value answers
-fn do_all_peers_see_room(logs: &[PathBuf], room: &str) -> bool { /* … */ }
-```
+Naming is RATIONALE §2: whatever its position, a `bool` is the question it answers —
+`is_visible`, not `visible`; `do_all_jobs_have_an_owner`, not `all_jobs_have_an_owner`.
 
 Judgement only.
 Ref: Robert Harper, [Boolean Blindness](https://existentialtype.wordpress.com/2011/03/15/boolean-blindness/).
