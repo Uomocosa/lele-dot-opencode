@@ -1,13 +1,15 @@
 ---
 name: lele-syntax-rs
-description: Use for Rust code in this project. Atomic files, domain folders, #[atomic_delegates] bodies in methods/, __basic__/ containers, bevy_systems/, domain-prefix imports, test_usage, thiserror, struct field shape. lele_lint enforces these; this skill is the mental model and the linter workflow, with judgement rules in references/RATIONALE.md and anti-patterns in references/SMELLS.md.
+description: Use for Rust code in this project — naming, design review, RATIONALE.md/SMELLS.md, atomic files, LELE0xx/LELEBEVY0xx lint.
 ---
 
 # lele syntax and architecture
 
-`lele_lint` enforces every rule that can be checked; each diagnostic carries an `E0xx`
-code. This file is the mental model plus how to use the linter. Do not memorise rules:
-ask the linter, and read `references/RATIONALE.md` for the rules it cannot check.
+`lele_lint` enforces every rule that can be checked; each diagnostic carries a code —
+`LELE0xx` from `lele-lint`, `LELEBEVY0xx` from `lele-bevy-lint` (`lele-lint --checker-list`,
+`lele-bevy-lint --checker-list`). The old `E0xx` scheme is retired. This file is the mental
+model plus how to use the linter. Do not memorise rules: ask the linter, and read
+`references/RATIONALE.md` for the rules it cannot check.
 
 ## 1. Mental model
 
@@ -84,9 +86,10 @@ are user-gated: do not broaden them or copy them to new sites.
 
 ## 4. What the linter cannot check — READ BOTH FILES
 
-`lele_lint` covers mechanical shape (`E0xx`, see the repo's `RULES.md` — `crates/lele-lint/RULES.md`). Everything it
-cannot check lives in two reference files, and reading both is mandatory before you design
-or review code:
+`lele_lint` covers mechanical shape (`LELE0xx`; `LELEBEVY0xx` for Bevy — see each repo's
+generated `RULES.md`: `crates/lele-lint/RULES.md`, `crates/lele-bevy-lint/RULES.md`).
+Everything it cannot check lives in two reference files, and reading both is mandatory
+before you design or review code:
 
 - `references/RATIONALE.md` — **principles**: positive design rules (do this).
 - `references/SMELLS.md` — **smells**: anti-patterns with bad/good examples (avoid this).
@@ -95,5 +98,6 @@ Together they are the written form of how this workspace is built — representa
 decomposition, naming. Most of "the way I program" lives in these two files.
 
 Boundary rule: **if a smell can be detected mechanically, it does not belong in either
-file — it becomes a `lele_lint` rule (`E0xx`).** Every entry names the `E0xx` that
-enforces part of it, or says "judgement only". Read both before designing.
+file — it becomes a `lele_lint` rule (`LELE0xx`; `LELEBEVY0xx` for Bevy).** Every entry
+names the `LELE0xx`/`LELEBEVY0xx` that enforces part of it, or says "judgement only". Read
+both before designing.

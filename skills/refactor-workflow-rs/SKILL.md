@@ -48,7 +48,7 @@ Do **NOT** edit anything yet. Wait for the user's reply.
 ## Phase 3 — Apply exactly ONE batch
 
 - A batch is ONE coherent rule family so a failure is attributable. Order batches:
-  mechanical / lint-enforced (`E0xx`) → structural → design / judgement.
+  mechanical / lint-enforced (`LELE0xx` / `LELEBEVY0xx`) → structural → design / judgement.
 - Re-show the batch's before/after snippets (per the global snippet rule), then apply only that batch.
 - Then verify **EVERY** crate under review — not just the edited one:
   - `just build|clippy|fmt|test|lint` per repo (`[[AGENTS.md::RUN_ALL_TESTS]]`), or raw

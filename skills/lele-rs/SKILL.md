@@ -38,10 +38,15 @@ signature. It exits instantly when no honest boundary is configured (so most cra
 ## Load Order
 
 1. `lele-rs` (this file) — always.
-2. `lele-syntax-rs` — for any `src/` edit. The linter (`lele_lint`) enforces the mechanical
-   rules; the full list is generated into `lele_lint/RULES.md`, and `lele_lint --explain E0xx`
-   prints one rule with a bad/good example (`--checker-list` lists checkers). Judgement rules
-   the linter cannot check live in `lele-syntax-rs/references/RATIONALE.md`.
+2. `lele-syntax-rs` — for any task that **names, designs, or reviews** code, whether or not
+   you edit a file. The linter (`lele_lint`) enforces the mechanical rules (`LELE0xx`;
+   `LELEBEVY0xx` from `lele-bevy-lint`); the full list is generated into
+   `crates/lele-lint/RULES.md`, and `lele-lint --explain LELE0xx` prints one rule with a
+   bad/good example (`--checker-list` lists checkers). The judgement rules are **two files
+   you must `read` immediately** after loading the skill — the `skill` tool does not inline
+   them: `lele-syntax-rs/references/RATIONALE.md` and
+   `lele-syntax-rs/references/SMELLS.md`. Do not design, name, or review anything before
+   reading both.
 3. `rust-env-rs` — when touching `rust-toolchain.toml`, `justfile`, `prek.toml`, `.cargo/config.toml`, or the workspace/`lele.toml` layout. Legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`.
 4. Domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...) — when the crate depends on that engine/protocol.
 

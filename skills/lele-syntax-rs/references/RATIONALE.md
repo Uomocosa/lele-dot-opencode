@@ -49,7 +49,13 @@ identifier and path component — so `banned = ["index"]` flagged `snapshot_inde
 `[[lele.vocabulary]]` is no longer part of `lele.toml`.
 
 A `bool`'s name is the question it answers: `is_*` / `has_*` / `can_*` / `should_*`,
-never a bare noun (`is_highlighted`, not `highlighted`).
+never a bare noun (`is_highlighted`, not `highlighted`). The same holds for a **function or
+method returning `bool`**: name it as the question it answers — an `is_*`/`has_*`/`can_*`/
+`should_*` phrase for state (`is_ring_ready`, `has_member`), or a question-form verb for
+facts (`does_the_log_contain`, `do_all_peers_see_room`) — never a statement
+(`all_peers_see_room`) or a bare noun (`room_present`). Established verb predicates
+(`contains`, `starts_with`) are fine; a leading `all_`/`any_`/`every_` is not a question and
+needs the verb (`do_all_…`, `does_any_…`).
 
 Ref: Fowler, [UbiquitousLanguage](https://martinfowler.com/bliki/UbiquitousLanguage.html).
 

@@ -61,7 +61,8 @@ struct Job {
 
 A `bool` is a yes/no question, so its name must read as one — `is_*`, `has_*`,
 `can_*`, `should_*` — never a bare noun or state adjective. The reader must be able
-to answer "true means …" from the name alone.
+to answer "true means …" from the name alone. A `bool`-returning **function** obeys the
+same rule: question form, not a statement.
 
 ```rust
 // BAD — a state, not a question
@@ -69,6 +70,14 @@ struct Row { visible: bool }
 
 // GOOD — the name is the question the value answers
 struct Row { is_visible: bool }
+```
+
+```rust
+// BAD — a statement with an ambiguous subject: does false mean "none", "not all", or "not yet"?
+fn all_see_room(logs: &[PathBuf], room: &str) -> bool { /* … */ }
+
+// GOOD — the name is the question the value answers
+fn do_all_peers_see_room(logs: &[PathBuf], room: &str) -> bool { /* … */ }
 ```
 
 Judgement only.
