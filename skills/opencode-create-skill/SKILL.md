@@ -119,6 +119,24 @@ description: |              # 1-1024 chars, must trigger correctly
 ---
 ```
 
+**Frontmatter must be valid YAML — a broken frontmatter silently deletes the skill.**
+opencode parses the `---`-delimited frontmatter *before* listing a skill; if parsing
+fails the skill disappears from `<available_skills>` and can no longer be loaded (the
+only signal is a harness notice that the skill ID is "no longer available"). The most
+common cause is a colon+space (`: `) inside an **unquoted plain scalar**:
+
+```yaml
+# BAD — the ": " makes YAML read a nested mapping -> ScannerError, skill vanishes
+description: Use for Rust code. FIRST ACTION: read references/SMELLS.md.
+
+# GOOD — quote the value when it contains ": " (or rephrase to avoid the colon)
+description: "Use for Rust code. FIRST ACTION: read references/SMELLS.md."
+```
+
+Block scalars avoid the problem entirely — in `description: |`, a `: ` on an indented
+continuation line is plain text. Always validate before finishing: the frontmatter must
+`yaml.safe_load` and expose both `name` and `description`.
+
 Then the body. Structure it for how agents actually read:
 - Most important instructions FIRST
 - Step-by-step workflow
@@ -147,6 +165,7 @@ Every check below must resolve to a binary yes/no from data on disk. No "would a
 
 | Check | Pass condition |
 |-------|----------------|
+| Frontmatter parses? | The `---`-delimited frontmatter is valid YAML and yields `name` + `description`. An unquoted plain-scalar value must not contain `: ` (colon-space) — it parses as a nested mapping (`ScannerError: mapping values are not allowed here`) and the skill silently disappears. A `: ` in a value is allowed only when the value is quoted (`description: "…: …"`) or written as a block scalar (`description: \|`). |
 | Name valid? | Lowercase, hyphens, 1-64 chars. `name` frontmatter == directory basename. |
 | Name follows tier? | `opencode-*` → general. `*-py`/`*-rs`/`*-ts` → language-specific. Bare name → tool. Check against **this project's `<available_skills>` and AGENTS.md manifest**, not external reality. A bare-name tool is a violation ONLY when another variant of the same tool with a `-{{language_fullname}}` suffix already exists in `<available_skills>`. The `<available_skills>` list is the sole authority — external implementations in other languages are irrelevant. |
 | Zero project references? | No literal package name or project identifier in code blocks or description. Convention/rule skills (`lele-syntax-*` etc.) are exempt — they document project standards. |
