@@ -355,6 +355,28 @@ intent, so a public name written at the mechanism's level has no comment to resc
 public name is climbing past two words it usually wants splitting into concepts, or it
 states the mechanism and wants renaming to the caller's level — never truncating.
 
+**Two kinds of wide-scope name.**
+- **Domain concepts**: things the user of the software already knows (`Order`, `Invoice`,
+  `Player`). One or two words.
+- **Internal machinery**: types that exist only so a mechanism works (caching, syncing,
+  hashing, wire formats), even when `pub`. Use as many words as it takes to say *what one
+  value holds*.
+
+Test: could someone who never read the implementation say what one value of this type is,
+from its name alone? If not, the name is too short.
+
+**Enums.** The name says the value is *one of several kinds* (`…Message`, `…Kind`,
+`…Event`, `…Command`); a singular-thing name (`Upload`, `Broadcast`) hides that it is a
+choice. Variants are grammatically parallel: all nouns, all past-tense events, or all
+instructions. Never mix them.
+
+```rust
+// BAD:  past-tense verb next to a plain noun
+enum QueueMessage { JobFinished, Status }
+// GOOD: all instructions to the receiver
+enum QueueMessage { RunThisJob, ReportYourStatus }
+```
+
 **The depth test.** An abstraction is only one if its **interface is much simpler than its
 implementation**; otherwise it is a *shallow module* — a pass-through that hides nothing and
 makes the caller read through it (SMELLS S5). Hidden detail must be a decision the caller

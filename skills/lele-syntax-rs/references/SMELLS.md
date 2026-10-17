@@ -228,3 +228,20 @@ Judgement only; a name-length or word-count lint would repeat the retired `vocab
 mistake (RATIONALE §2). Related: RATIONALE §13.
 Refs: Ousterhout, *A Philosophy of Software Design* (vague names; "hard to pick a name" is a
 design signal); the Ousterhout–Martin discussion (scope vs. name length).
+
+## S8. Jargon instead of description
+
+A technique's term of art (`digest`, `fingerprint`, `shard`, `blob`, `envelope`, `frame`)
+names how something is done, not what the value is. Describe the value instead.
+
+```rust
+// BAD:  the reader must know the technique to decode the name
+struct Digest(u64);
+// GOOD: the name says what it holds
+struct FileContentHash(u64);
+```
+
+One word, one meaning: never give a word already used in the codebase a second meaning.
+
+Judgement only. Related: RATIONALE §2 (ubiquitous language), §13 (two kinds of wide-scope
+name), S7.

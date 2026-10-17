@@ -58,6 +58,21 @@ signature. It exits instantly when no honest boundary is configured (so most cra
 3. `rust-env-rs` — when touching `rust-toolchain.toml`, `justfile`, `prek.toml`, `.cargo/config.toml`, or the workspace/`lele.toml` layout. Legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`.
 4. Domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...) — when the crate depends on that engine/protocol.
 
+## Naming workflow (MUST)
+
+1. **Define before naming.** For each new type, write one sentence saying what one value
+   of it represents. If two proposed types sound alike, state how they differ, or merge
+   them.
+2. **Check the linter's shape rules before proposing a shape** (`lele-lint --explain`).
+   Never show the user a shape the linter will reject.
+3. **Offer options.** Give several candidates in a table showing how each reads at the
+   call site, plus one recommendation.
+4. **Preview before writing.** Show the signatures and one call site before any
+   implementation.
+5. **Every new public name needs approval**, including names that come up mid-
+   implementation. Stop and ask; never introduce one silently and report it afterwards.
+6. **Re-read recent history before planning** (`git log -5 --stat`). A plan can be stale.
+
 ## Global Config Placement
 
 - Global skills live in `~/.config/opencode/skills/<name>/SKILL.md`.
