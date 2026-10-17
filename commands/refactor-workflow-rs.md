@@ -1,9 +1,9 @@
 ---
-description: Batch refactor Rust crates with per-batch approval and verification
+description: Batch refactor Rust crates (lint, naming, abstraction) with per-batch approval and verification
 agent: build
 ---
 
-Load the `refactor-workflow-rs` skill and follow it exactly.
+Load the `refactor-workflow-rs` skill and follow it exactly. Default lens: all three.
 
 Crates to review: $ARGUMENTS
 

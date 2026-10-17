@@ -1,6 +1,6 @@
 # WORKFLOW SETUP — the blocking first phase of every Rust workflow skill
 
-Every workflow skill (`refactor-workflow-naming-rs`, `refactor-workflow-rs`, `plan-remove-dead-code-rs`)
+Every workflow skill (`refactor-workflow-rs`, `plan-remove-dead-code-rs`)
 runs this setup **before** it inventories, audits, or proposes anything. Skipping a step is a
 violation; the proof-of-setup block (step 6) makes a skipped step visible to the user.
 
