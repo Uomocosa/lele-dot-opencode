@@ -25,6 +25,17 @@ fn apply(items: &mut [Item], strategy: impl Fn(&mut Item)) {
 }
 ```
 
+**Depth limit — the one this rule was missing.** An extraction is only meaningful when the
+implementation is *more deeply detailed than the interface* (Martin, APoSD–Clean Code;
+Ousterhout's deep/shallow ratio). If the body is a single call to another item with a
+similar signature, the caller still has to read it: that is a layer, not an abstraction
+(§13, SMELLS S5).
+
+This limit judges *designed* seams only. A `#[atomic_delegates]` shell is a one-line
+forwarder **on purpose** (`method_file_co_location` requires the split); shape-only items
+(`From`, `Deref`, trait impls) and thin I/O adapters (§3) are likewise exempt. Deleting an
+atomic delegate is deleting the architecture, not an abstraction (§13, *Limits*).
+
 Enforced in part by **`helper_count`** (one public function per file, at most two
 unnamed private helpers). Everything else is judgement.
 
@@ -306,3 +317,90 @@ Judgement only; not enforced. The newtype shape itself is **`single_field_newtyp
 
 The same test rules out multi-field tuples as data carriers: a `(PathBuf, String, String)` is a
 positional type one call site must decode by position — see **SMELLS S4**.
+
+## 13. Abstraction — object, action, question
+
+An abstraction is a simplified way of thinking about something that omits unimportant
+details (Ousterhout): the **interface** is what matters to the caller, the **implementation**
+is what does not. The name of an abstraction therefore sits **one level above its body** —
+it states the caller's concept, the body states the mechanism.
+
+Dijkstra's test: *the purpose of abstracting is not to be vague, but to create a new
+semantic level in which one can be absolutely precise.* A name that is a synonym for its
+inner type, or a restatement of its body, creates no new level and is not an abstraction.
+
+**Three kinds, one per syntactic role** (§12 is the same test for a wrapped scalar):
+
+- **`struct`/`enum` = object abstraction** — a noun: the thing, its state, its invariants
+  (`ClickCounter`, `Format`, `Upload`), named for what it *is*, never for how it is stored.
+- **`fn`/method = action abstraction** — a verb: the transformation it performs
+  (`increment`, `render_states`, `dial_candidates`), named for what it *does*.
+- **`bool` = question** — the exception to both: neither noun nor verb, always the yes/no
+  question it answers (`is_ready`, `do_all_jobs_have_an_owner`). See §2; a `bool` field is
+  rare (SMELLS S2).
+
+**The name/scope gradient.** Names shorten as scope widens (Martin, APoSD–Clean Code):
+
+- **wide scope** (`pub` item, domain concept) — one or two words: the concept the caller
+  already has in their head.
+- **narrow scope** (body locals, private helpers, `#[rustfmt::skip]` single statements) —
+  two, three, four words, or as many as the mechanism honestly needs. **There is no word
+  cap**: long is correct when the detail is that specific, and wrong only when it climbs a
+  level that is not its own.
+
+`clear_totals` and `make_statement` are public; `is_least_relevant_multiple_of_larger_prime`
+is a private helper six calls deep. This matters more here than in either author's book
+because **this workspace bans comments** (§1, SKILL.md §1): the name is the only carrier of
+intent, so a public name written at the mechanism's level has no comment to rescue it. If a
+public name is climbing past two words it usually wants splitting into concepts, or it
+states the mechanism and wants renaming to the caller's level — never truncating.
+
+**The depth test.** An abstraction is only one if its **interface is much simpler than its
+implementation**; otherwise it is a *shallow module* — a pass-through that hides nothing and
+makes the caller read through it (SMELLS S5). Hidden detail must be a decision the caller
+never needs (Parnas: a module hides one design decision — the one that may change); hiding
+one they do need is a *false abstraction* (SMELLS S6, §3).
+
+```rust
+// BAD — name and body are the same level; the caller learns nothing and reads through
+pub fn read_config(path: &Path) -> Result<Config, Error> {
+    parse_file(path)
+}
+
+// GOOD — the name is the caller's concept; the body is the detail below it
+pub fn read_config(path: &Path) -> Result<Config, Error> {
+    let mut config = Config::default();
+    for line in fs::read_to_string(path)?.lines().filter(|line| !line.starts_with('#')) {
+        let (key, value) = line.split_once('=').ok_or(Error::MissingEquals)?;
+        config.set(key.trim(), value.trim())?;
+    }
+    Ok(config)
+}
+```
+
+**Limits — what the depth test does NOT judge.**
+
+- **Atomic-delegate shells** (`#[atomic_delegates]` `impl` blocks whose bodies live in
+  `methods/<type>/<method>.rs`) are one-line forwarders **by definition**; the split is
+  mandated by **`method_file_co_location`**, not chosen as a design. Judging a delegate shell
+  as a pass-through would delete the architecture — it is shape, not an abstraction. Same
+  standing as the `methods/`, `__basic__/` and `bevy_systems/` exceptions in §4.
+- **Shape-only items** — `impl From`, `Deref`, a trait impl — restate a type, not a concept.
+- **Thin adapters at an I/O boundary** (§3) are allowed to be thin; the test is on the
+  *concept*, not the line count.
+
+Do not abstract ahead of the code: name the concrete thing first and compress upward only
+when the same semantic thing appears a second time (`definition-abstraction` §6; Muratori,
+*Semantic Compression*). A wrong abstraction — one that keeps gaining parameters and
+conditionals — is inlined and re-compressed, not patched (SMELLS S5; Metz).
+
+Judgement only; the linter cannot count words, and a word-count or name-length rule would
+repeat the retired `vocabulary` mistake (§2). **No lint rule is planned for this** —
+pass-through stays judgement (SMELLS S5).
+
+Refs: Ousterhout, *A Philosophy of Software Design* (deep/shallow modules, pass-through
+methods, different layer/different abstraction, "abstractions not features"); the
+Ousterhout–Martin discussion (*Method Length*); Martin, *Clean Code* ch. 3 and ch. 6;
+Liskov & Guttag, *Abstraction and Specification in Program Development* (the abstraction
+function); Dijkstra, *The Humble Programmer* (EWD340); Parnas, *On the Criteria To Be Used in
+Decomposing Systems into Modules*; `definition-abstraction`.

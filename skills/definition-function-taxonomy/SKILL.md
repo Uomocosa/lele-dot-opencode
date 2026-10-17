@@ -273,6 +273,11 @@ function bounce(velocity, normal: NormalizedVector) -> velocity
 
 Applies generally: when a parameter has an invariant (non-empty, sorted, normalized, locked mutex proof), encode it so the signature tells the truth.
 
+Abstraction is a **separate axis**. Honesty is about whether the real *inputs and outputs*
+are in the signature (this skill); abstraction is about how much *implementation* sits behind
+the interface (`definition-abstraction`). An honest function can still be a shallow
+pass-through; a deep module can still read the clock. Judge both, independently.
+
 ## 7. Common Mistakes
 
 * Calling hidden-state reads "pure because no mutation" — hidden reads are dishonest.

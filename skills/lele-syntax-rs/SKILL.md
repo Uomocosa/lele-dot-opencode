@@ -62,6 +62,10 @@ pub fn increment(counter: &mut ClickCounter) {
   the public function owns the accumulator and returns it (RATIONALE §11).
 - **Newtype purpose.** Wrap a scalar to carry an *invariant* or a *role*, never a synonym; a
   path (`PathBuf`) is already typed, so don't wrap it just to restate that (RATIONALE §12).
+- **Abstraction level.** A `struct`/`enum` name is a noun (the object), a `fn` name is a verb
+  (the action), a `bool` is a question; a wide-scope name is short (1–2 words) and the body
+  with its narrow-scope helpers carries the mechanism (two, three, four words or more — no
+  cap) (RATIONALE §13).
 
 ## 2. Working with the linter
 

@@ -41,8 +41,17 @@ code, not from the name:
   (`tests/common/*`), `#[macro_export]` macros, `bool` fields.
 - For each item, record where it is *constructed* and where it is *read*.
 
-Judge with RATIONALE §2 (one word per concept; every `bool` is named as the question it answers)
-and §12 (a newtype carries an invariant or a role, never a synonym) in front of you:
+Judge with RATIONALE §2 (one word per concept; every `bool` is named as the question it answers),
+§12 (a newtype carries an invariant or a role, never a synonym) and §13 (a `struct` is an
+object/noun, a `fn` is an action/verb, a `bool` is a question; wide scope = short name, narrow
+scope = longer name, no cap) in front of you:
+
+- **Abstraction level** — for each type/function: is the name the caller's *concept* (1–2
+  words) or has the *mechanism* leaked in (more than two words on a wide-scope item)? A name
+  whose body is at the same level of detail is a shallow abstraction (SMELLS S5) — a design
+  change, not a rename: record it as `deepen` and keep it out of the rename batches. Do not
+  propose `deepen` for `#[atomic_delegates]` shells, shape-only items (`From`, `Deref`, trait
+  impls) or thin I/O adapters (RATIONALE §13 *Limits*).
 
 - **Linter-compatible** — a name must not repeat its parent module (`LELE012`: `parse::ParseConfig`
   ✗, `parse::Config` ✓). Renaming a *module* can make existing types stutter — check both ways. If the
@@ -75,7 +84,7 @@ The first output MUST contain, in this order:
 
 1. **Inventory** — the evidence, one row per item, the meaning taken from the code:
    `Name | Meaning (one line, from the code) | Verdict | Alternatives`. Mark a meaning inferred from
-   fields alone, without reading users. Verdicts: `keep` · `rename` · `merge` · `delete (dead)` · `split`.
+   fields alone, without reading users. Verdicts: `keep` · `rename` · `merge` · `delete (dead)` · `split` · `deepen`.
 2. **Concept clusters** — groups that may be ONE concept (e.g. `Thing` / `ThingEntry` /
    `ThingRecord` / `store::Thing`). For each: what each member holds, whether they can merge, and if
    not, *why* (different source of truth, local vs. shared/persisted state, different role).

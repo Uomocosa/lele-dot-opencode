@@ -152,3 +152,79 @@ struct RenderedState {
 Judgement only. Field **access** is **`no_positional`**, and the named-field shape is **`single_field_newtype`**. Note `no_positional`
 cannot see inside `assert!`/`assert_eq!` macro bodies, so positional access hidden there is on
 you. Related: RATIONALE §12.
+
+## S5. Shallow abstraction (pass-through name)
+
+A name that claims to abstract away the code, but whose body is at the same level of detail
+as the name: a `pub fn` that only forwards its arguments to another item with a similar
+signature, a wrapper that adds no invariant and no role. The interface is not much simpler
+than the implementation, so the caller reads through it anyway. It is a layer, not an
+abstraction (Ousterhout's *shallow module*).
+
+```rust
+// BAD — the name tells the caller nothing the body does not
+pub fn read_config(path: &Path) -> Result<Config, Error> {
+    parse_file(path)
+}
+
+// GOOD — the name is the concept; the body holds the detail
+pub fn read_config(path: &Path) -> Result<Config, Error> {
+    let text = fs::read_to_string(path)?;
+    parse_config(&text)
+}
+```
+
+Trigger: `pub` item whose body is a single call at the same abstraction level; a wrapper with
+no invariant and no role. Counter-indication — do **not** flag: `#[atomic_delegates]` shells
+(one-line by design; `method_file_co_location` mandates the split — RATIONALE §13 *Limits*),
+a thin adapter at an I/O boundary (RATIONALE §3), a shape-only item (`impl From`, `Deref`,
+trait impl), or a deliberate seam for a `[[lele.boundary]]`.
+
+Judgement only. No lint rule is planned for this — a mechanical check ("`pub fn` whose sole
+statement calls an item with an identical parameter list") was considered and rejected as too
+noisy against legitimate thin adapters. Related: RATIONALE §13.
+Ref: Ousterhout, *A Philosophy of Software Design* (shallow module; pass-through method).
+
+## S6. False abstraction (leaky interface)
+
+A name that hides a decision the caller actually depends on, so the caller reads the body
+anyway. Unlike S5 this one has depth — but the wrong boundary: it hides something that
+*matters to the caller* instead of something that may change (Parnas; RATIONALE §3).
+
+```rust
+// BAD — hides the deletion rule the UI must display; callers read the body to find out
+impl Text {
+    pub fn backspace(&mut self) {}
+}
+
+// GOOD — the decision is in the interface, where the caller needs it
+impl Text {
+    pub fn delete_previous_grapheme(&mut self) {}
+}
+```
+
+Judgement only. Related: RATIONALE §3, §13.
+Refs: Ousterhout, *A Philosophy of Software Design* (false abstraction; information leakage);
+Spolsky, *The Law of Leaky Abstractions*; Parnas 1972.
+
+## S7. Abstraction-level mismatch in a name
+
+A name written at the wrong level for its scope: a wide-scope item named for its mechanism
+(`write_bytes_then_flush` as a public API), or a single-caller helper named for a concept
+broader than it performs (Ousterhout's *vague name*). The wide-scope name is the concept
+(one or two words); the mechanism belongs in the body and in its narrow-scope names — two,
+three, four words or more, with **no cap**. This is §2 read for nouns and verbs instead of
+`bool`s.
+
+```rust
+// BAD — the public name states the mechanism, and its order
+pub fn handshake_write_bytes_and_flush(stream: &mut Stream) -> Result<(), Error>
+
+// GOOD — the public name is the concept; the mechanism is the body
+pub fn handshake(stream: &mut Stream) -> Result<(), Error>
+```
+
+Judgement only; a name-length or word-count lint would repeat the retired `vocabulary`
+mistake (RATIONALE §2). Related: RATIONALE §13.
+Refs: Ousterhout, *A Philosophy of Software Design* (vague names; "hard to pick a name" is a
+design signal); the Ousterhout–Martin discussion (scope vs. name length).
