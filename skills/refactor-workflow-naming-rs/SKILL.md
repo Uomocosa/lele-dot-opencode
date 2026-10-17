@@ -1,6 +1,6 @@
 ---
 name: refactor-workflow-naming-rs
-description: Use when renaming the vocabulary and structure of one or more Rust crates — modules/folders, public types, files, functions, fields, features, log keys. Produces one batch table (batch | renames | why) covering every proposed rename plus the literal before/after previews for batch 1, applies exactly one approved batch, re-verifies every reviewed crate, then stops and names the next batch. The naming sibling of refactor-workflow-rs: same gates, but the input is ubiquitous language, not lint findings.
+description: "Use when renaming the vocabulary and structure of one or more Rust crates — modules/folders, public types, files, functions, fields, features, log keys. Produces one batch table (batch | renames | why) covering every proposed rename plus the literal before/after previews for batch 1, applies exactly one approved batch, re-verifies every reviewed crate, then stops and names the next batch. The naming sibling of refactor-workflow-rs: same gates, but the input is ubiquitous language, not lint findings."
 ---
 
 # Refactor Workflow — Naming (Rust)
