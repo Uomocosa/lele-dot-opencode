@@ -6,6 +6,15 @@ description: Use when searching for Python files whose primary pub item has zero
 ## Goal
 Find and report files whose primary `pub` item has zero internal consumers in the codebase.
 
+## Phase −1 — CRITICAL setup (blocking)
+Before searching:
+1. Load `lele-syntax-py` and read it in full — its `*Method/` subpackages, PascalCase
+   subpackages, `__HELPER_DIR__` and new-import-system re-exports change what a "consumer" is.
+2. Load `pixi` when the project has `pixi.toml` / `[tool.pixi]`; verification runs through it.
+3. Run the **baseline** test suite once and record pre-existing failures.
+4. Open the first reply with a **Setup:** block (skills loaded, files read, baseline result).
+   No candidate list may appear before it.
+
 ## Detection Method
 For each `.py` file that defines a class or top-level function:
 

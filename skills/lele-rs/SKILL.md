@@ -34,6 +34,7 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 | Date-time, `Zoned`/`Timestamp`/`Span`, time zones, Temporal format | `jiff-rs` |
 | Function taxonomy — pure/impure vs honest/dishonest definitions, pseudocode | `definition-function-taxonomy` |
 | State machines — one `update` entrypoint, `State`/`Input`/`Output`, transitions `-> Output` | `definition-state-machine` + `lele-syntax-rs` (RATIONALE *State machines*) |
+| Workflow skills (`refactor-*-rs`, `plan-remove-dead-code-rs`) — blocking setup: skills, reads, baseline lint, proof block | `references/WORKFLOW_SETUP.md` |
 
 **`lele:taxonomy_check`** runs `lele_function_taxonomy` (a rustc-MIR driver). It checks only
 `[[lele.boundary]]` folders with `require = "honest"`: every function physically inside must reach hidden

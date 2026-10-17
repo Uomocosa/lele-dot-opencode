@@ -6,6 +6,20 @@ description: "Use when searching for Rust files whose primary pub item has zero 
 ## Goal
 Find and report files whose primary `pub` item has zero internal consumers in the codebase.
 
+## Phase −1 — CRITICAL setup (blocking)
+Run `~/.config/opencode/skills/lele-rs/references/WORKFLOW_SETUP.md` in full before searching:
+load the listed skills, read RATIONALE.md + SMELLS.md + `lele-lint --rules-md` (+
+`lele-bevy-lint --emit rules-md` for Bevy crates), run the **baseline** `just lint|bevy-lint|clippy`,
+and open the first reply with the **Setup:** proof block. The lele layout changes what a
+"consumer" is: `mod.rs` `pub use` flattening, `__basic__/` re-exports, `bevy_systems/` systems
+registered only in a plugin, and `methods/` delegate bodies reached through `#[atomic_delegates]`
+shells are all normal — none of them proves an item is used, and none proves it is dead.
+
+## Also dead
+A value that is **constructed but never read** — a resource inserted and written but never
+queried, a config field stored but never consumed, a constant defined but never referenced —
+is a removal candidate even though its name has references. Grep for *reads*.
+
 ## Detection Method
 For each `.rs` file in `src/` containing a `pub struct`, `pub enum`, `pub fn`, or `pub type`:
 

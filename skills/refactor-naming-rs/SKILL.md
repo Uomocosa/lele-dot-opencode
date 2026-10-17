@@ -15,6 +15,15 @@ user can review at a glance; edits happen only after explicit approval, one batc
 - Command: `/refactor-naming-rs {crates}` → this skill, with `$ARGUMENTS` as the crate list.
 - Run from the **build** agent. Applying edits is forbidden in plan mode.
 
+## Phase −1 — CRITICAL setup (blocking)
+
+Run `~/.config/opencode/skills/lele-rs/references/WORKFLOW_SETUP.md` in full before anything
+else: load the listed skills, read RATIONALE.md + SMELLS.md + `lele-lint --rules-md` (+
+`lele-bevy-lint --emit rules-md` for Bevy crates), run the **baseline** `just lint|bevy-lint|clippy`,
+and open the first reply with the **Setup:** proof block. For naming, also read in full
+`lele-lint --explain` for LELE001, LELE011, LELE012, LELE022, LELE026, LELE027, LELE030 —
+every rename moves files, types or delegate folders through these.
+
 ## Phase 0 — Resolve scope
 
 - `crates` = the argument list. If empty, the user means the whole workspace.
@@ -25,11 +34,9 @@ user can review at a glance; edits happen only after explicit approval, one batc
 
 ## Phase 1 — Load rules, then inventory
 
-1. `lele-rs` (always), then `lele-syntax-rs` and **read in full** its `references/RATIONALE.md`
-   (§2 ubiquitous language, §9 `From`, §12 newtype purpose) and `references/SMELLS.md`.
-2. Load the domain skills the crate depends on (`bevy-rs`, `libp2p`, `freenet`, `serde-rs`, …).
-3. Read the repo's `justfile` FIRST — its recipes are the canonical verifiers.
-4. Inventory, per crate:
+1. Confirm Phase −1 is done. Keep RATIONALE §2 (ubiquitous language), §9 (`From`) and §12
+   (newtype purpose) in front of you for every verdict.
+2. Inventory, per crate:
    - **Domains**: every top-level module under `src/` and every submodule folder.
    - **Types**: every `pub struct` / `pub enum` / `pub type` (`grep -rhn '^pub \(struct\|enum\|type\)'`).
    - **Also**: Cargo feature names, `tracing` `target:`s, log keys parsed by tests

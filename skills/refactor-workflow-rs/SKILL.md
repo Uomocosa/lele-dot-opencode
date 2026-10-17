@@ -13,6 +13,14 @@ batch: once to approve the plan, once to advance. **Never auto-carry into the ne
 - Command: `/refactor-workflow-rs {crates}` → this skill, with `$ARGUMENTS` as the crate list.
 - Run from the **build** agent. Applying edits is forbidden in plan mode.
 
+## Phase −1 — CRITICAL setup (blocking)
+
+Run `~/.config/opencode/skills/lele-rs/references/WORKFLOW_SETUP.md` in full before anything
+else: load the listed skills, read RATIONALE.md + SMELLS.md + `lele-lint --rules-md` (+
+`lele-bevy-lint --emit rules-md` for Bevy crates), run the **baseline** `just lint|bevy-lint|clippy`,
+and open the first reply with the **Setup:** proof block. Lint findings are this skill's whole
+input, so every proposed fix cites its `LELE0xx`/`LELEBEVY0xx` code from the generated rules.
+
 ## Phase 0 — Resolve scope
 
 - `crates` = the argument list. If empty, the user means the whole workspace.
@@ -22,16 +30,9 @@ batch: once to approve the plan, once to advance. **Never auto-carry into the ne
 
 ## Phase 1 — Load rules, then audit
 
-1. `lele-rs` (always), then `lele-syntax-rs` (+ `references/RATIONALE.md`, `references/SMELLS.md`).
-2. Per crate: if its `Cargo.toml` depends on a tool with a skill (`bevy-rs`, `serde-rs`, `clap-rs`,
-   `jiff-rs`, `rayon-rs`, `criterion-rs`, `itertools-rs`, `reqwest-rs`, or a bare tool `libp2p` /
-   `freenet` / `pixi`), load it.
-3. `rust-env-rs` when touching `rust-toolchain.toml`, `justfile`, `prek.toml`, `.cargo/config.toml`
-   (legacy: `devenv-rs-legacy` for crates that still ship `devenv.nix`).
-4. Read the repo's `justfile` FIRST for every repo under review — its recipes are the
-   canonical verifiers (legacy: `<crate>/devenv.nix` `lele:*` tasks).
-5. Audit each crate's `src/` against the loaded rule sets. Record every finding as
-   `crate | file:line | rule | proposed change`.
+1. Confirm Phase −1 is done (skills, reads, baseline). Do not re-derive it here.
+2. Audit each crate's `src/` against the loaded rule sets. Record every finding as
+   `crate | file:line | rule | proposed change`; mark baseline findings as such.
 
 ## Phase 2 — Propose: manifest first, then batch 1 (NO EDITS)
 
