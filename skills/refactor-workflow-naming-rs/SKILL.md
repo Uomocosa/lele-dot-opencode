@@ -68,6 +68,9 @@ and §12 (a newtype carries an invariant or a role, never a synonym) in front of
 
 ## Phase 2 — Propose: batch table first, then batch 1 (NO EDITS)
 
+**At most 5 batches per window.** If the audit yields more, stop the table at batch 5 and add one
+line — `<n> more batches after these` — then present the next window only after batch 5 is green.
+
 The first output MUST contain, in this order:
 
 1. **Inventory** — the evidence, one row per item, the meaning taken from the code:
@@ -118,7 +121,7 @@ Only when EVERY reviewed crate is green, emit exactly this shape and STOP:
 Applied (batch <n-1>):
   | From | To | Files touched |
 
-Next batch (<n> of <total>):
+Next batch (<n>):
   | batch | renames | why |
   |---|---|---|
   | <n> | <old -> new><br>… | <one-line reason> |
@@ -132,7 +135,9 @@ Proceed with batch <n>, or change the batch? (reply yes / re-scope / stop)
 
 **Code previews are mandatory at EVERY approval gate.** A list of renames is not a preview.
 
-Do **NOT** auto-carry. Wait for the reply, then loop to Phase 2/3 with the next batch.
+Do **NOT** auto-carry. Wait for the reply, then loop to Phase 2/3 with the next batch. When the
+window's last batch is green, re-audit and present the next window the same way — never carry the old
+table forward.
 
 ## Hard rules
 

@@ -1,6 +1,6 @@
 ---
 name: refactor-workflow-rs
-description: Use when refactoring one or more Rust crates batch-by-batch with user approval — audits the named crates (or the whole repo when none are named) against the loaded convention skills, presents a manifest of ALL proposed edits plus the first batch as before/after snippets, applies exactly one approved batch, re-verifies every reviewed crate, then stops and names the next batch.
+description: Use when refactoring one or more Rust crates batch-by-batch with user approval — audits the named crates (or the whole repo when none are named) against the loaded convention skills, presents a manifest table of at most 5 batches plus the literal before/after snippets for batch 1, applies exactly one approved batch, re-verifies every reviewed crate, then stops and names the next batch.
 ---
 
 # Refactor Workflow (Rust)
@@ -28,19 +28,31 @@ input, so every proposed fix cites its `LELE0xx`/`LELEBEVY0xx` code from the gen
   list directories containing `Cargo.toml`. Never invent a crate.
 - Echo the resolved list back before auditing.
 
-## Phase 1 — Load rules, then audit
+## Phase 1 — Audit
 
-1. Confirm Phase −1 is done (skills, reads, baseline). Do not re-derive it here.
+1. Confirm Phase −1 is done. Do not re-derive it here.
 2. Audit each crate's `src/` against the loaded rule sets. Record every finding as
-   `crate | file:line | rule | proposed change`; mark baseline findings as such.
+   `crate | file:line | change | why`; mark baseline findings as such.
 
-## Phase 2 — Propose: manifest first, then batch 1 (NO EDITS)
+## Phase 2 — Propose: manifest table, then batch 1 (NO EDITS)
+
+**At most 5 batches per window.** If the audit yields more, stop the manifest at batch 5 and add one
+line — `<n> more batches after these` — then present the next window only after batch 5 is green.
 
 First output MUST contain, in this order:
 
-1. **Manifest** — a table of *every* proposed edit, grouped into batches:
-   `batch | crate | file:line | rule | one-line change`.
-2. **Batch 1 preview** — the literal before/after code for batch-1 items (per the global
+1. **Manifest** — every proposed edit in the current window, one row per finding, grouped by batch:
+
+   | batch | change | why |
+   |---|---|---|
+   | 1 | `alpha` `src/parse.rs:41` `parse::ParseConfig` -> `parse::Config`<br>`alpha` `src/emit.rs:7` `emit::EmitJob` -> `emit::Job` | LELE012 — the type repeats its parent module |
+   | 2 | `beta` `src/store.rs:112` drop the unused `Serialize` derive | LELE026 — the derive is unused, it only silences the rule |
+   | 3 | `beta` `src/methods/plugin/mod.rs:1` move `methods/plugin/` under `Plugin` | LELE030 — the delegate folder is keyed by type name |
+
+   The `change` cell carries the crate, the `file:line` and the edit, so no row is ambiguous about where
+   it lands. `why` starts with the rule code, or `judgement` when no rule covers the finding; a baseline
+   finding is prefixed `baseline`.
+2. **Batch 1 preview** — the literal before/after code for every batch-1 row (per the global
    `CRITICAL: Code Snippets` rule).
 3. A closing question: **"Proceed with batch 1, or re-scope?"**
 
@@ -64,10 +76,14 @@ Only when EVERY reviewed crate is green, emit exactly this shape and STOP:
 ```
 ✅ All green: <crate1>, <crate2>, <crate3>
 
-Next batch (<n> of <total>):
-  - <item a: file:line — one-line change>
-  - <item b: file:line — one-line change>
-  - <item c: file:line — one-line change>
+Applied (batch <n-1>):
+  | change | files touched |
+  |---|---|
+
+Next batch (<n>):
+  | batch | change | why |
+  |---|---|---|
+  | <n> | <crate> <file:line> <one-line change> | <rule> — <one-line reason> |
 
 Batch <n> preview:
   <for EVERY item: file:line, then the literal `// before` / `// after` code block,
@@ -78,9 +94,11 @@ Proceed with batch <n>, or change the batch? (reply yes / re-scope / stop)
 
 **CRITICAL — code previews are mandatory at EVERY approval gate**, not only for batch 1.
 The next-batch prompt is invalid without the literal before/after snippets for every item;
-a bullet list of one-line changes is NOT a preview. The user approves code, not summaries.
+a table of one-line changes is NOT a preview. The user approves code, not summaries.
 
-Do **NOT** auto-carry. Wait for the reply, then loop to Phase 2/3 with the next batch.
+Do **NOT** auto-carry. Wait for the reply, then loop to Phase 2/3 with the next batch. When the
+window's last batch is green, re-audit and present the next window the same way — never carry the old
+manifest forward.
 
 ## Hard rules
 
