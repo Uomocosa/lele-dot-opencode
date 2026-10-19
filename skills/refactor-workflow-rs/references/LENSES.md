@@ -42,5 +42,8 @@ constructed and read.
 - **False abstraction** — hides a decision callers actually depend on → expose it in the signature.
 - **Premature** — an abstraction with one user and no hidden decision → inline.
 - **Primitive fields** — `item_count: usize` when the items exist upstream → `items: Vec<Item>`.
+- **Functional reshapes** — `definition-functional-patterns` FP1–FP9 (higher-order fn, iterator
+  pipeline, core/shell, transform-not-mutate, illegal states, combinators, table, composition,
+  closures over state); cite the id, only when smaller AND clearer.
 
 Verdicts: `keep` · `rename` · `merge` · `delete` · `split` · `deepen` · `inline` · `out of scope`.

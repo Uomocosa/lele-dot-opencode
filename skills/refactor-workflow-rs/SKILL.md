@@ -17,7 +17,7 @@ Every batch is a small, behaviour-preserving step with an approval gate at **bot
 ## 1. Setup (blocking)
 
 Run `~/.config/opencode/skills/lele-rs/references/WORKFLOW_SETUP.md` in full, and also load
-`definition-abstraction`. Open the first reply with its **Setup:** proof block.
+`definition-abstraction` and `definition-functional-patterns`. Open the first reply with its **Setup:** proof block.
 
 ## 2. Scope
 
