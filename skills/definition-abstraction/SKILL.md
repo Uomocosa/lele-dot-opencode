@@ -50,7 +50,7 @@ bool  is_ready        # question: the exception, named as the question it ANSWER
 Names get shorter as scope widens, and longer as scope narrows — with no upper bound:
 
 ```
-wide scope  : parse_config, handshake, render_frame       # 1-2 words: the caller's concept
+wide scope  : parse_config, handshake, render_frame       # 1-2 words: a domain concept the caller knows
 narrow scope: is_least_relevant_multiple_of_larger_prime  # as many words as the detail needs
 ```
 
@@ -58,6 +58,8 @@ A wide-scope name written at the mechanism's level leaks the implementation; a n
 name written at the concept's level is vague. Long names are correct when the detail is that
 specific — two, three, four words or more. **There is no word cap**; truncating a name is
 worse than lengthening it, and the only error is climbing a level that is not its own.
+"Wide" means *widely known concept*, not *public visibility*: internal machinery is narrow
+scope even when exported, and gets the long, descriptive name.
 
 ## 5. The depth test (the guardrail)
 

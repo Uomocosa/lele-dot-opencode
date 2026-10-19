@@ -10,7 +10,7 @@ You are reviewing ONE file from a Rust crate you cannot see. Conventions of this
 - `__basic__/` holds behavior-free types; `mod.rs` holds only `mod` / `pub use`.
 - `#[atomic_delegates] impl T { fn f(..) {} }` is a shell: each empty body forwards to
   `methods/<t_snake>/<f>.rs`, where the real body lives as a free function.
-- Wide-scope names are short (the caller's concept); narrow-scope names are as long as needed.
+- Domain-concept names are short; internal-machinery names (even `pub`) are as long as needed.
   A `bool` is named as the question it answers.
 Answer only from what you are shown. Do not guess what you cannot see; say it is unclear.
 ```

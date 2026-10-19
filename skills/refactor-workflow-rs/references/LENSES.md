@@ -31,7 +31,8 @@ constructed and read.
 
 ## `shape` — abstraction (`definition-abstraction`, SMELLS S5–S7)
 
-- **Scope gradient** — wide scope: 1–2 word caller concept; narrow scope: as long as needed.
+- **Scope gradient** — domain concept: 1–2 words; internal machinery (even `pub`) and narrow
+  scope: as long as needed (3–7 words is normal). A truncated machinery name → lengthen it.
   A wide name that leaks the mechanism → rename or `deepen`.
 - **Shallow / pass-through** — interface as complex as the body → `deepen` (absorb the caller's
   work) or inline. Exempt: `#[atomic_delegates]` shells, `From`/`Deref`/trait impls, thin I/O

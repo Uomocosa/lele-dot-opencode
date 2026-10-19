@@ -211,10 +211,11 @@ Spolsky, *The Law of Leaky Abstractions*; Parnas 1972.
 
 A name written at the wrong level for its scope: a wide-scope item named for its mechanism
 (`write_bytes_then_flush` as a public API), or a single-caller helper named for a concept
-broader than it performs (Ousterhout's *vague name*). The wide-scope name is the concept
-(one or two words); the mechanism belongs in the body and in its narrow-scope names — two,
+broader than it performs (Ousterhout's *vague name*). A domain-concept name is the concept
+(one or two words); internal machinery (even `pub`) and the mechanism belongs in the body and in its narrow-scope names — two,
 three, four words or more, with **no cap**. This is §2 read for nouns and verbs instead of
-`bool`s.
+`bool`s. The opposite error is as common: machinery truncated to a domain-sized name
+(`Cache`, `Entry`, `sync`, `apply`) — a reader cannot say what one value holds. Lengthen it.
 
 ```rust
 // BAD — the public name states the mechanism, and its order

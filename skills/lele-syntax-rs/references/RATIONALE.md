@@ -341,8 +341,9 @@ inner type, or a restatement of its body, creates no new level and is not an abs
 
 **The name/scope gradient.** Names shorten as scope widens (Martin, APoSD–Clean Code):
 
-- **wide scope** (`pub` item, domain concept) — one or two words: the concept the caller
-  already has in their head.
+- **wide scope** (a *domain concept*: a thing the user of the software already knows) — one or
+  two words: the concept the caller already has in their head. **`pub` is not wide scope**:
+  the atomic-file layout makes nearly every item `pub`, so visibility says nothing here.
 - **narrow scope** (body locals, private helpers, `#[rustfmt::skip]` single statements) —
   two, three, four words, or as many as the mechanism honestly needs. **There is no word
   cap**: long is correct when the detail is that specific, and wrong only when it climbs a
@@ -352,15 +353,18 @@ inner type, or a restatement of its body, creates no new level and is not an abs
 is a private helper six calls deep. This matters more here than in either author's book
 because **this workspace bans comments** (§1, SKILL.md §1): the name is the only carrier of
 intent, so a public name written at the mechanism's level has no comment to rescue it. If a
-public name is climbing past two words it usually wants splitting into concepts, or it
-states the mechanism and wants renaming to the caller's level — never truncating.
+domain-concept name is climbing past two words it may want splitting into concepts — never
+truncating. Internal machinery is the common case and is NOT subject to the 1–2 word
+target; its names are routinely 3–7 words (`PeerScoreByLatencyAndUptime`,
+`pending_uploads_by_content_hash`, `rebuild_index_after_snapshot_merge`).
 
 **Two kinds of wide-scope name.**
 - **Domain concepts**: things the user of the software already knows (`Order`, `Invoice`,
   `Player`). One or two words.
-- **Internal machinery**: types that exist only so a mechanism works (caching, syncing,
-  hashing, wire formats), even when `pub`. Use as many words as it takes to say *what one
-  value holds*.
+- **Internal machinery**: types, fns, enums and aliases that exist only so a mechanism works
+  (caching, syncing, hashing, wire formats, schedulers, bookkeeping), even when `pub`. Use as
+  many words as it takes to say *what one value holds* / *what one call does*. When unsure
+  which kind an item is, it is machinery: default to the longer, descriptive name.
 
 Test: could someone who never read the implementation say what one value of this type is,
 from its name alone? If not, the name is too short.
