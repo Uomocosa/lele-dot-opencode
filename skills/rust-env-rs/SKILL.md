@@ -39,6 +39,10 @@ ci: build check
 
 - Keep leaves independent (no `just a: b` chains for checks); `ci` is the only aggregate.
 - In a workspace, run the linter once per crate: `lele-lint --config lele.toml crates/<name>`.
+- Call fleet tools by their plain name (`lele-lint`, `lele-bevy-lint`, `lele-function-taxonomy`),
+  never `cargo run --manifest-path ../…`. Locally the name resolves to a `<fleet>/bin` shim
+  (written by `lele-release setup`) that builds the sibling checkout, so tool changes need no
+  `just install`; `LELE_USE_INSTALLED=1` forces the installed binary. See lele-release README.
 
 ## 3. Hooks — `prek.toml` driving `just`
 
