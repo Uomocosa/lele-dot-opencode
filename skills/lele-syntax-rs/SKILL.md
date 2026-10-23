@@ -55,7 +55,9 @@ pub fn increment(counter: &mut ClickCounter) {
   newtype → distinct scalar with an invariant; struct → two or more fields. Need
   `X::from(...)`? Derive it with `derive_more::From` (`#[from(forward)]` to accept `Into`
   types); never on a type with an invariant — see RATIONALE §9.
-- **Errors.** `thiserror` enums; never `unwrap`/`expect`/`panic`.
+- **Errors.** `thiserror` enums; never `unwrap`/`expect`/`panic`. Keep a caught error as a
+  `#[source]`/`#[from]` field, never its text (`no_stringified_errors`), and never print the
+  source in the variant's message (`error_message_omits_source`); a binary prints the chain.
 - **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`).
 - **No comments** in `src/`/`methods/` except `// needed helper: <why>` and the test opt-out.
 - **Recursion.** A tree walk lives in an inner `fn recursion(...)` inside its public function;
