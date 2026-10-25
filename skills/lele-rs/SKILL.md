@@ -50,7 +50,7 @@ signature. It exits instantly when no honest boundary is configured (so most cra
    you edit a file. The linter (`lele_lint`) enforces the mechanical rules (`LELE0xx`;
    `LELEBEVY0xx` from `lele-bevy-lint`); the full list is generated into
    `crates/lele-lint/RULES.md`, and `lele-lint --explain LELE0xx` prints one rule with a
-   bad/good example (`--checker-list` lists checkers). The judgement rules are **two files
+   bad/good example (`--rule-list` lists rules). The judgement rules are **two files
    you must `read` immediately** after loading the skill — the `skill` tool does not inline
    them: `lele-syntax-rs/references/RATIONALE.md` and
    `lele-syntax-rs/references/SMELLS.md`. Do not design, name, or review anything before

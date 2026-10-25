@@ -10,8 +10,8 @@ description: Use for Rust code in this project — naming, design review, atomic
 > The `skill` tool does not inline them; this file is not a substitute.
 
 `lele_lint` enforces every rule that can be checked; each diagnostic carries a code —
-`LELE0xx` from `lele-lint`, `LELEBEVY0xx` from `lele-bevy-lint` (`lele-lint --checker-list`,
-`lele-bevy-lint --checker-list`). The old `E0xx` scheme is retired. This file is the mental
+`LELE0xx` from `lele-lint`, `LELEBEVY0xx` from `lele-bevy-lint` (`lele-lint --rule-list`,
+`lele-bevy-lint --rule-list`). The old `E0xx` scheme is retired. This file is the mental
 model plus how to use the linter. Do not memorise rules: ask the linter, and read
 `references/RATIONALE.md` for the rules it cannot check.
 
@@ -19,8 +19,10 @@ model plus how to use the linter. Do not memorise rules: ask the linter, and rea
 
 - **Domain folders.** One folder per feature under `src/` (`src/stock/`). Types, method
   bodies and systems co-locate there; there is no `structs/`/`methods/` split.
-- **Atomic files.** One primary item per file, named after it (`greet.rs` holds
-  `pub fn greet`; `config.rs` holds `pub struct Config`).
+- **Atomic files.** One primary item per file, named after it (`config.rs` holds
+  `pub struct Config`). A free `pub fn` in `src/` is an error (`no_free_functions`): make it
+  a method of its first argument's type or of its return type (a newtype if neither is a
+  crate type); `bevy_systems/` and `[[lele.lint.entry_points]]` are exempt.
 - **Struct + delegate shells.** `<type>.rs` holds the struct, its `impl Default`, and one
   `#[atomic_delegates]` shell block; method bodies live in `methods/<type_snake>/<method>.rs`
   (a single-statement body is inlined under `#[rustfmt::skip]` instead).
@@ -59,9 +61,16 @@ pub fn increment(counter: &mut ClickCounter) {
   `#[source]`/`#[from]` field, never its text (`no_stringified_errors`), and never print the
   source in the variant's message (`error_message_omits_source`); a binary prints the chain.
 - **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`).
-- **No comments** in `src/`/`methods/` except `// needed helper: <why>` and the test opt-out.
+- **No comments** in `src/`/`methods/` except the final `// no test_usage necessary` opt-out.
+- **Helpers are methods.** No private `fn` anywhere (`helpers_are_methods`): a helper is a
+  `pub(crate)` method or associated fn of the type it serves — an `#[atomic_delegates]` shell
+  (body in `methods/`) or an inline one-liner. In every impl block the `pub` methods come first,
+  then the `pub(crate)` ones (`pub_before_crate`). A `methods/<type>/<method>.rs` file holds only
+  `use`s, private `const`s, `pub fn <method>` and its tests (`methods_are_delegates`); internal
+  types (visitors, hit records) live in `src/` as `pub(crate)`.
 - **Recursion.** A tree walk lives in an inner `fn recursion(...)` inside its public function;
-  the public function owns the accumulator and returns it (RATIONALE §11).
+  the public function owns the accumulator and returns it (RATIONALE §11). It is the only inner
+  `fn` allowed (`no_inner_fns`).
 - **Newtype purpose.** Wrap a scalar to carry an *invariant* or a *role*, never a synonym; a
   path (`PathBuf`) is already typed, so don't wrap it just to restate that (RATIONALE §12).
 - **Abstraction level.** A `struct`/`enum` name is a noun (the object), a `fn` name is a verb
@@ -80,6 +89,8 @@ just lint                 # or: lele-lint --config lele.toml <crate>
   crate (`lele-lint --config lele.toml crates/<name>`).
 - Every finding is an error with a code. Explain one with `lele-lint --explain <name-or-code>`
   (prints the rule with a bad/good example).
+- The rule index, one line per rule with the fix to apply, is the generated
+  `lele-lint-rules` skill. Load it whenever you clear lint errors.
 - `RULES.md` is per-repo (`crates/lele-lint/RULES.md`); never copy rule text here.
 - One root `lele.toml` + `clippy.toml` per workspace; boundary `folders` are workspace-relative
   (the config file's directory is the base).

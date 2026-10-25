@@ -117,6 +117,6 @@ pub fn increment(state: &mut {{module}}::ClickerState, amount: u64) {
 
 - Compose plugins as a tuple: `app.add_plugins((p2p::Plugin::new(cfg), sync::Plugin));`.
 - `lele-bevy-lint` is authoritative for the Bevy-specific rules: run `just bevy-lint`, or
-  `lele-bevy-lint --checker-list` / `--explain <name>` (installed from
+  `lele-bevy-lint --rule-list` / `--explain <name>` (installed from
   `github.com/Uomocosa/lele-rust-linter`). See the `bevy-ui-preview` skill for the UI preview
   rules, the `lele_bevy_preview` scene DSL and the test template.

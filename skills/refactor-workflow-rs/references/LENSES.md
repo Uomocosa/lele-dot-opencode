@@ -1,7 +1,7 @@
 # Audit lenses
 
 Load the full section for any rule a proposal touches (`lele-lint --explain <CODE>`). For the
-`name` lens always read LELE001, LELE011, LELE012, LELE022, LELE026, LELE027, LELE030.
+`name` lens always read LELE001, LELE011, LELE012, LELE022, LELE026, LELE030.
 
 ## `lint`
 

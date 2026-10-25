@@ -1,6 +1,6 @@
 ---
 name: refactor-workflow-rs
-description: Use when refactoring one or more Rust crates batch-by-batch with user approval — audits the named crates (or the whole workspace) through three lenses (lint findings, naming/vocabulary, abstraction depth), presents one table of at most 5 batches plus literal before/after code for batch 1, applies exactly one approved behaviour-preserving batch, re-verifies every reviewed crate, then stops and names the next batch.
+description: Use when refactoring one or more Rust crates batch-by-batch with user approval — audits the named crates (or the whole workspace) through three lenses (lint findings, naming/vocabulary, abstraction depth), presents one table of at most 5 batches plus literal before/after code for batch 1, applies exactly one approved behaviour-preserving batch, re-verifies every reviewed crate, then stops and names the next batch. To clear lint errors autonomously (no approval) use lele-lint-fix-rs.
 ---
 
 # Refactor Workflow (Rust)

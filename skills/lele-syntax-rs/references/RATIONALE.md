@@ -36,8 +36,9 @@ forwarder **on purpose** (`method_file_co_location` requires the split); shape-o
 (`From`, `Deref`, trait impls) and thin I/O adapters (§3) are likewise exempt. Deleting an
 atomic delegate is deleting the architecture, not an abstraction (§13, *Limits*).
 
-Enforced in part by **`helper_count`** (one public function per file, at most two
-unnamed private helpers). Everything else is judgement.
+Enforced in part by **`helpers_are_methods`** (no private `fn`: a helper is a `pub(crate)` method
+of the type it serves), **`methods_are_delegates`** (a method file holds only its body) and
+**`no_inner_fns`**. Everything else is judgement.
 
 Refs: Fowler, [Extract Function](https://refactoring.com/catalog/extractFunction.html) and
 [Parameterize Function](https://refactoring.com/catalog/parameterizeFunction.html);
@@ -276,10 +277,9 @@ step as the behaviour parameter (§1).
 
 **Limits:** use this for genuinely tree-shaped walks. A flat scan is clearer as a `for`/iterator;
 a graph that can revisit nodes needs an explicit stack/queue plus a visited set — follow the data
-structure. `helper_count` counts only top-level functions, and no rule descends into a function body,
-so the inner `recursion` is invisible to the linter and needs **no** `// needed helper:` marker.
+structure. **`no_inner_fns`** bans every other inner `fn`; `recursion` is the one exempt name.
 
-Judgement only; not enforced.
+The walk's shape is judgement; the name is enforced by `no_inner_fns`.
 
 ## 12. When a newtype earns its place — and why `PathBuf` usually doesn't
 
