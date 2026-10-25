@@ -52,8 +52,12 @@ From the target directory, in the background, with a session title you can find 
 
 ```bash
 cd "<dir>" && opencode run -m <model> --auto --format json --title "<short title>" "<prompt>" \
-  > <scratch>/<title>.jsonl 2>&1
+  < /dev/null > <scratch>/<title>.jsonl 2>&1
 ```
+
+Always close stdin (`< /dev/null`): started in the background with stdin open, `opencode run`
+waits for input and never starts the session. Confirm it started: the `.jsonl` gets a
+`step_start` line within a minute, or the session export gains messages.
 
 Then find the session id: `opencode session list` (run in `<dir>`), newest first.
 
@@ -88,7 +92,7 @@ rule the user already stated:
 
 ```bash
 cd "<dir>" && opencode run --session <session-id> -m <model> --auto --format json "<answer + next step>" \
-  > <scratch>/<title>-2.jsonl 2>&1
+  < /dev/null > <scratch>/<title>-2.jsonl 2>&1
 ```
 
 **Report to the user and stop** when the choice is theirs: config or rule changes,
