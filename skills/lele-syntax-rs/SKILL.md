@@ -90,7 +90,7 @@ just lint                 # or: lele-lint --config lele.toml <crate>
 - Every finding is an error with a code. Explain one with `lele-lint --explain <name-or-code>`
   (prints the rule with a bad/good example).
 - The rule index, one line per rule with the fix to apply, is the generated
-  `lele-lint-rules` skill. Load it whenever you clear lint errors.
+  `lele-lint-rules-rs` skill. Load it whenever you clear lint errors.
 - `RULES.md` is per-repo (`crates/lele-lint/RULES.md`); never copy rule text here.
 - One root `lele.toml` + `clippy.toml` per workspace; boundary `folders` are workspace-relative
   (the config file's directory is the base).

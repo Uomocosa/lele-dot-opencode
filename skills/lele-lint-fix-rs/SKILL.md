@@ -8,7 +8,7 @@ description: Use when a Rust crate has lele-lint / lele-bevy-lint (LELE0xx / LEL
 Clear every lele lint error in ONE crate, autonomously, without changing behaviour.
 
 ## Setup
-Load the `lele-lint-rules` skill and read it IN FULL before the first edit. A fix for one
+Load the `lele-lint-rules-rs` skill and read it IN FULL before the first edit. A fix for one
 rule must not break another: check every file you create or edit against its
 "Every file you create or edit" list.
 
@@ -24,7 +24,7 @@ the target crate. Inside `lele-rust-linter` that is
 Bevy crates); elsewhere it is the installed `lele-lint` / `lele-bevy-lint` binaries.
 Explain a rule: `<linter> --explain <CODE>`.
 
-Learn a rule ONLY from `--explain`, each error's `help:` line and the `lele-lint-rules` skill.
+Learn a rule ONLY from `--explain`, each error's `help:` line and the `lele-lint-rules-rs` skill.
 Never read the linter's own source code (`lele-rust-linter/crates/...`) to work out what
 passes the check: the goal is code that follows the rule, not code that slips past it.
 
@@ -34,11 +34,11 @@ passes the check: the goal is code that follows the rule, not code that slips pa
 2. Pick ONE code. Priority: structural/placement first (helpers or types in method files,
    atomic file, free functions, methods layout, delegates, re-exports), then naming/imports,
    then comments and impl ordering last. Ties → fewest errors first.
-3. Read the code's `Fix:` line in the `lele-lint-rules` skill and `--explain <CODE>` once;
+3. Read the code's `Fix:` line in the `lele-lint-rules-rs` skill and `--explain <CODE>` once;
    follow its Good example. Each error's `help:` line is the fix for that exact site.
 4. Fix EVERY error of that code, same pattern each time. More than ~25 → one folder at a time.
    If a message says to run `--sync-methods`, run the repo's `just sync-methods`.
-   Before saving each edit, check the file against the `lele-lint-rules` "Every file you
+   Before saving each edit, check the file against the `lele-lint-rules-rs` "Every file you
    create or edit" list. Most often: a helper that becomes a method keeps at most 3
    statements inline (`#[rustfmt::skip]` block, no constructors in it); a longer one goes
    behind an empty shell in the type's `#[atomic_delegates]` block with its body and a
