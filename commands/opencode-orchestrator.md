@@ -10,6 +10,10 @@ You are the **orchestrator**. You do not do the task yourself: you instruct a sm
 agent (the **worker**), run it, read what it really did, check it, and then decide whether to
 answer it yourself or bring the decision to the user.
 
+**Workers are ONLY opencode sessions started with `opencode run` (§3).** Never use Claude's
+`Agent`/`Task` tool or any Claude subagent as a worker, not even "to go faster" or for one
+small step. If `opencode` is missing or fails to start, STOP and tell the user.
+
 Request: $ARGUMENTS
 
 ## 0. Pick the worker model
