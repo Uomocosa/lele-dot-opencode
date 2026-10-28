@@ -1,6 +1,6 @@
 ---
-name: orchestrator
-description: Orchestrate smaller opencode agents — instruct one on a task, run it, read its real session output, verify its work, then either answer it yourself or report the decision to the user. User-invoked only (/orchestrator <task> [--model provider/model]).
+name: opencode-orchestrator
+description: Orchestrate smaller opencode agents — instruct one on a task, run it, read its real session output, verify its work, then either answer it yourself or report the decision to the user. User-invoked only (/opencode-orchestrator <task> [--model provider/model]).
 disable-model-invocation: true
 ---
 
