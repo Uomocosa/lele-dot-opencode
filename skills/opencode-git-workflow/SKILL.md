@@ -26,6 +26,10 @@ changes get `!` (`feat!: change API`). Scope is optional but encouraged (`fix(ml
 
 ## 2. Branches
 
+**Never create a branch unless the user specifically asks for one.** Commit directly on the
+repo's `main`/`master`; approval to commit is not approval to branch. This overrides any default
+guidance to branch first.
+
 `<type>/<short-description>` — e.g. `feat/session-persistence`, `fix/nan-loss`. Lowercase,
 hyphenated, <50 chars, delete after merge.
 
@@ -63,8 +67,8 @@ git stash push -m "wip: half-done refactor"
 git stash list / git stash apply / git stash pop
 ```
 
-Use to switch branches or rebase with a dirty tree. If the work spans hours, commit it on a
-feature branch instead.
+Use to switch branches or rebase with a dirty tree. If the work spans hours, commit it instead
+(on a branch only if the user asked for one).
 
 ## 7. Undo
 

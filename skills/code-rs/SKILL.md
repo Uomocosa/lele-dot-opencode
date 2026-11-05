@@ -62,7 +62,7 @@ stable. Answer information questions directly. Still no edits.
 ## 5. Apply (only after explicit proceed)
 
 - Apply exactly the approved plan; anything new discovered → stop and re-plan that part.
-- Verify: `export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just build 2>&1`, then
+- Verify: `export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just build 2>&1`, then
   `just clippy`, `just fmt`, `just test`, `just lint` (raw cargo if no justfile). Never pipe.
 - Red → fix within the plan's scope, or stop and report. Never `#[allow(...)]` without sign-off.
 - Report results, then stop. No commit, push, merge, or rebase.

@@ -1,6 +1,6 @@
 ---
 name: bevy-rs
-description: Use when working in a crate that depends on the Bevy game engine (bevy 0.19, Rust). Docs links plus the patterns we use here — plugin struct+delegate separation, bevy_systems placement, App-based testing, and the core-logic + wrapper-system command pattern.
+description: Use when working in a crate that depends on the Bevy game engine (bevy 0.20, Rust). Docs links plus the patterns we use here — plugin struct+delegate separation, bevy_systems placement, App-based testing, and the core-logic + wrapper-system command pattern.
 ---
 
 # bevy-rs — Bevy (Bevy-specific conventions)
@@ -8,7 +8,7 @@ description: Use when working in a crate that depends on the Bevy game engine (b
 Bevy patterns for Rust crates that depend on `bevy`. Where Bevy idioms differ, these override
 the general `lele-syntax-rs` rules.
 
-**Targets bevy 0.19.** Older versions use `Event`/`EventWriter`/`EventReader`; 0.19 uses
+**Targets bevy 0.20.** Older versions use `Event`/`EventWriter`/`EventReader`; 0.19 uses
 `Message`/`MessageWriter`/`MessageReader`.
 
 ## Docs & examples
@@ -120,3 +120,5 @@ pub fn increment(state: &mut {{module}}::ClickerState, amount: u64) {
   `lele-bevy-lint --rule-list` / `--explain <name>` (installed from
   `github.com/Uomocosa/lele-rust-linter`). See the `bevy-ui-preview` skill for the UI preview
   rules, the `lele_bevy_preview` scene DSL and the test template.
+
+**0.20 buttons:** `Interaction` and `bevy::ui::widget::Button` are deprecated. Use `bevy::ui_widgets::Button` with `Hovered::default()`, and detect presses with `Added<Pressed>`. To disable a button insert `InteractionDisabled`: removing `Hovered` is not enough, because `Button` observers still add `Pressed`.

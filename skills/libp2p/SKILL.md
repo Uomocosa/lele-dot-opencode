@@ -5,7 +5,7 @@ description: Use when establishing direct p2p connections with rust-libp2p (Swar
 
 # libp2p — P2P Networking Patterns
 
-**Target: libp2p 0.56.** Check [releases](https://github.com/libp2p/rust-libp2p/releases) for
+**Target: libp2p 0.57.** Check [releases](https://github.com/libp2p/rust-libp2p/releases) for
 version history.
 
 ## Docs & examples
@@ -35,7 +35,7 @@ let mut swarm = libp2p::SwarmBuilder::with_new_identity()
     .build();
 ```
 
-`Cargo.toml`: `libp2p = { version = "0.56", features = ["tcp", "noise", "yamux", "tokio", "dns"] }`.
+`Cargo.toml`: `libp2p = { version = "0.57", features = ["tcp", "noise", "yamux", "tokio", "dns"] }`.
 
 ## How we use libp2p here
 

@@ -27,7 +27,7 @@ Spawn the **`blind-reader`** subagent (it has no file tools). Send the round-1 p
 ## 3. Round 2 — plus context
 
 ```bash
-export PATH="$HOME/.cargo/bin:$PATH" && python3 ~/.config/opencode/skills/blind-review-file-rs/scripts/context.py <file> 2>&1
+export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$PATH" && python3 ~/.config/opencode/skills/blind-review-file-rs/scripts/context.py <file> 2>&1
 ```
 
 Send its output with the round-2 prompt to the **same** subagent (Claude Code: `SendMessage` to

@@ -24,8 +24,11 @@ Request: $ARGUMENTS
 - Check it exists before anything else:
   `opencode models 2>&1 | grep -Fx "<model>"`
   `opencode models` can return a short list while the background service is busy, so on no
-  match wait a few seconds and check once more. Still no exact match → **STOP**. Tell the user the model was not found and show the closest names
-  from `opencode models`. Never fall back to another model on your own.
+  match wait a few seconds and check once more. Some working models (e.g. Muse Spark
+  Contributor) are never listed, so still no match → probe it with a one-shot run in the
+  scratchpad: `timeout 90 opencode run -m <model> "reply OK" < /dev/null 2>&1`.
+  It answers → use it. Probe fails too → **STOP**. Tell the user the model was not found and
+  show the closest names from `opencode models`. Never fall back to another model on your own.
 
 Shell calls need `export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$HOME/.local/bin:$HOME/.opencode/bin:$PATH" &&`.
 
@@ -59,9 +62,18 @@ cd "<dir>" && opencode run -m <model> --auto --format json --title "<short title
   < /dev/null > <scratch>/<title>.jsonl 2>&1
 ```
 
+Run that command with the Bash tool's `run_in_background: true` (max `timeout`), **not** with
+`nohup … &` or a `( … & )` subshell. `opencode run` exits when the worker's turn ends, so the
+harness notifies you the moment the worker stops — no polling, no "wait for idle" loop.
+
 Always close stdin (`< /dev/null`): started in the background with stdin open, `opencode run`
 waits for input and never starts the session. Confirm it started: the `.jsonl` gets a
 `step_start` line within a minute, or the session export gains messages.
+
+If the run was started detached anyway, poll the export **written to a file first** (piping
+`opencode session export` straight into a JSON parser truncates large sessions) until its last
+message has `"type": "idle"`. Never wait on `pgrep -f "<title>"`: it matches the watcher's own
+command line and never ends.
 
 Then find the session id: `opencode session list` (run in `<dir>`), newest first.
 

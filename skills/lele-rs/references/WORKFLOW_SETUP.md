@@ -35,11 +35,14 @@ Decide from each crate's `Cargo.toml` `[dependencies]` and `[dev-dependencies]`,
 Before proposing anything, run per repo (PATH prefix and `2>&1`, never piped):
 
 ```bash
-export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just lint 2>&1
-export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just bevy-lint 2>&1   # when present
-export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just clippy 2>&1
+export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && for t in lele-lint lele-bevy-lint; do echo "$t $(command -v $t) $($t --version)"; LELE_USE_INSTALLED=1 $t --version; done 2>&1
+export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just lint 2>&1
+export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just bevy-lint 2>&1   # when present
+export PATH="/home/uomocosa/Syncthing/[R] Rust/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && just clippy 2>&1
 ```
 
+The first line must resolve to the `[R] Rust/bin` shim, and the shim's and the installed version
+must match; a mismatch means a stale install — run `just install` in `lele-rust-linter` first.
 Record every pre-existing finding as **baseline**. Baseline findings are never attributed to a
 batch, and a batch is "green" when it adds no finding beyond the baseline.
 
@@ -65,6 +68,7 @@ The linter is authoritative; skills are guidance. When two sources disagree (e.g
 Setup:
   Skills:   lele-rs, lele-syntax-rs, bevy-rs, freenet, …
   Read:     RATIONALE.md, SMELLS.md, lele-lint --rules-md, lele-bevy-lint --emit rules-md, justfile, lele.toml
+  Linter:   lele-lint 0.0.9 (shim, installed 0.0.9) | lele-bevy-lint 0.0.9 (shim, installed 0.0.9)
   Baseline: lint ✅ | bevy-lint ❌ 2 (LELEBEVY005 overlay.rs:290, LELEBEVY008 spawn_connecting.rs:72) | clippy ✅
   Conflicts: <none | list, with the question to the user>
 ```
