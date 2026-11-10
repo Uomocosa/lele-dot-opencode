@@ -54,7 +54,8 @@ impl Plugin {
 ```
 
 `lib.rs` mounts the crate-root bodies folder with
-`#[path = "../__methods__/mod.rs"] pub mod methods;`.
+`#[path = "../__methods__/mod.rs"] mod methods;` (private, never re-exported — bodies are
+reached through their type's methods, never `methods::…`).
 
 ### Component / Resource / Message types
 
@@ -74,9 +75,9 @@ both `#[derive(Component)]` and `#[derive(Resource)]` — split shared data into
 
 Registered systems are plain functions in `{{module}}/__bevy_systems__/`, one item per file
 named after the function (`LELEBEVY002`). `mod.rs` mounts the dunder folder with
-`#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;` — Rust paths stay
-`{{module}}::bevy_systems::…` — and does **not** re-export systems at the domain root;
-`__bevy_systems__/mod.rs` flattens via `pub use`.
+`#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;` (or `pub(crate)`) — Rust paths
+stay `{{module}}::bevy_systems::…` — and never re-exports a system at the domain root
+(`LELEBEVY001`); `__bevy_systems__/mod.rs` flattens via `pub use`.
 
 ```rust
 // {{module}}/mod.rs

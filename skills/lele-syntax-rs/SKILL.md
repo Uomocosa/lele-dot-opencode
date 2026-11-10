@@ -25,8 +25,9 @@ model plus how to use the linter. Do not memorise rules: ask the linter, and rea
   crate type); `__bevy_systems__/` and `[[lele.lint.entry_points]]` are exempt.
 - **Struct + delegate shells.** `<type>.rs` holds the struct, its `impl Default`, and the
   empty-bodied shells; bodies live in the crate-root `__methods__/<type_snake>/<method>.rs`
-  (`LELE030` — mounted in `lib.rs` as `#[path = "../__methods__/mod.rs"] pub mod methods;`;
-  a single-statement body is inlined under `#[rustfmt::skip]` instead). One
+  (`LELE030` — mounted in `lib.rs` as `#[path = "../__methods__/mod.rs"] mod methods;`,
+  private and never re-exported — bodies are reached through their type's methods, never
+  `methods::…`; a single-statement body is inlined under `#[rustfmt::skip]` instead). One
   `#[atomic_delegates]` block per `impl_item_order` group — constructor shells, `pub`
   shells, `pub(crate)` shells; no block mixes groups and `new` is never delegated (`LELE032`)
   — so hand-written impls sit between the blocks in the fixed order constructors →
@@ -66,22 +67,33 @@ impl UnixTime {
 
 - **Dunder folders** are linter-enforced layout folders (`LELE038`: mounted with
   `#[path = ".../mod.rs"]` and named without the dunders everywhere in code — `basic`,
-  never `__basic__`). Two kinds; the code dunders are fully linted and hold one item per file:
+  never `__basic__`). One public path per item: `basic` items are re-exported flat from
+  the domain (`RATIONALE` §4); traits and systems keep the folder in their path and are
+  never re-exported (`LELE038`/`LELEBEVY001`). Two kinds; the code dunders are fully
+  linted and hold one item per file:
   - **`__basic__/` (container)** — behaviour-free types by role (plain
     structs/enums/newtypes/aliases/markers), mounted `#[path = "__basic__/mod.rs"]
-    pub mod basic;`. No code, no tests; a type that gets any `impl` graduates to its own file.
+    mod basic;` (private) with each item re-exported flat from the domain `mod.rs`
+    (`pub use basic::enums::HelloKind;` → `domain::HelloKind`; the path survives the type
+    graduating to its own `hello_kind.rs`). No code, no tests; a type that gets any
+    `impl` graduates to its own file.
   - **`__traits__/` (code)** — one trait per file `<trait_snake>.rs` (`LELE041`), mounted
-    `#[path = "__traits__/mod.rs"] pub mod traits;` and re-exported from the domain
-    `mod.rs` (`pub use traits::Clock;`); never a `Trait` suffix — the folder says it.
+    `#[path = "__traits__/mod.rs"] pub mod traits;` (or `pub(crate)`) and never
+    re-exported — callers write `domain::traits::Greetable` and import it with
+    `use crate::domain::traits::Greetable;` to call its methods (`pub use traits::…;` is a
+    `LELE038` error); never a `Trait` suffix — the folder says it.
   - **`__bevy_systems__/` (code)** — Bevy systems (`LELEBEVY002`), mounted
-    `#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;`; Rust paths stay
+    `#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;` (or `pub(crate)`) and
+    never re-exported (`LELEBEVY001`); Rust paths stay
     `{{module}}::bevy_systems::poll_events`.
 - **Trait impls co-locate with the type** (`LELE042`): `impl Trait for LocalType` lives in
   the file that defines the type (`cfg(feature)` impls included); blanket impls and impls
   for foreign types live in the trait's `__traits__/` file. A `__basic__` type is a
   container item and keeps no impls — graduate it to its own `<type>.rs` first.
 - **Imports.** Import the domain and qualify: `use crate::stock;` then `stock::Item`.
-  `super::` is allowed only inside `#[cfg(test)]`; `crate::` appears only in `use` items.
+  The one exception is a trait: import it with `use crate::stock::traits::Greetable;`
+  so its methods are callable. `super::` is allowed only inside `#[cfg(test)]`;
+  `crate::` appears only in `use` items.
 - **Struct shape.** Exactly one field means a tuple newtype with `#[derive(Deref)]`, read
   through deref; two or more means named fields. Positional `.0` is banned. A newtype
   wraps one **scalar** value; it never wraps a collection (`no_collection_newtype`) — a collection is held

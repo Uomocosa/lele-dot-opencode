@@ -104,6 +104,16 @@ code dunders `__methods__/` (hide delegate bodies until they are needed) and
 `__bevy_systems__/` (all systems of a domain are found in one place, mounted
 `#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;`).
 
+Exports follow the same feature-oriented rule: **one public path per item** — re-export
+only what can move. `__basic__/` is mounted private (`mod basic;`) and each item is
+re-exported flat from the domain `mod.rs` (`pub use basic::enums::HelloKind;` →
+`domain::HelloKind`): a basic type graduates to its own `<type>.rs`, and the flat path
+survives that graduation, while a `pub mod basic;` mount would leak a second path that
+breaks the day the type moves. Traits and systems cannot move — `__traits__/` and
+`__bevy_systems__/` are `pub` (or `pub(crate)`) mounts, never re-exported (`LELE038`,
+LELEBEVY001) — so `domain::traits::Greetable` and `domain::bevy_systems::poll_events`
+stay as permanent as the flat path. Every public path is then permanent and unique.
+
 Judgement only; the folder shape rules (**`atomic_file`**, **`method_file_co_location`**, **`container_placement`**) enforce the mechanics.
 
 Ref: Robert C. Martin, [Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html).
