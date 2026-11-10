@@ -98,9 +98,11 @@ Cockburn, [Hexagonal architecture](https://alistair.cockburn.us/hexagonal-archit
 
 The top-level source tree should name the features of the system, not the framework that
 delivers it. `src/stock/`, `src/roster/`; never `src/handlers/`, `src/models/`. The three
-deliberate exceptions in this workspace are `methods/` (hide delegate bodies until they
-are needed), `__basic__/` (behaviour-free types do not each need a file and a test), and
-`bevy_systems/` (all systems of a domain are found in one place).
+deliberate exceptions in this workspace are the dunder layout folders (`LELE038`): the
+container `__basic__/` (behaviour-free types do not each need a file and a test) and the
+code dunders `__methods__/` (hide delegate bodies until they are needed) and
+`__bevy_systems__/` (all systems of a domain are found in one place, mounted
+`#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;`).
 
 Judgement only; the folder shape rules (**`atomic_file`**, **`method_file_co_location`**, **`container_placement`**) enforce the mechanics.
 
@@ -407,10 +409,11 @@ pub fn read_config(path: &Path) -> Result<Config, Error> {
 **Limits — what the depth test does NOT judge.**
 
 - **Atomic-delegate shells** (`#[atomic_delegates]` `impl` blocks whose bodies live in
-  `methods/<type>/<method>.rs`) are one-line forwarders **by definition**; the split is
-  mandated by **`method_file_co_location`**, not chosen as a design. Judging a delegate shell
-  as a pass-through would delete the architecture — it is shape, not an abstraction. Same
-  standing as the `methods/`, `__basic__/` and `bevy_systems/` exceptions in §4.
+  the crate-root `__methods__/<type>/<method>.rs`) are one-line forwarders **by definition**;
+  the split is mandated by **`LELE030`** (`method_file_co_location`), not chosen as a design.
+  Judging a delegate shell as a pass-through would delete the architecture — it is shape, not
+  an abstraction. Same standing as the `__methods__/`, `__basic__/` and `__bevy_systems__/`
+  exceptions in §4.
 - **Shape-only items** — `impl From`, `Deref`, a trait impl — restate a type, not a concept.
 - **Thin adapters at an I/O boundary** (§3) are allowed to be thin; the test is on the
   *concept*, not the line count.

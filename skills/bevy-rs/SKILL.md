@@ -1,6 +1,6 @@
 ---
 name: bevy-rs
-description: Use when working in a crate that depends on the Bevy game engine (bevy 0.20, Rust). Docs links plus the patterns we use here — plugin struct+delegate separation, bevy_systems placement, App-based testing, and the core-logic + wrapper-system command pattern.
+description: Use when working in a crate that depends on the Bevy game engine (bevy 0.20, Rust). Docs links plus the patterns we use here — plugin struct+delegate separation, __bevy_systems__ placement, App-based testing, and the core-logic + wrapper-system command pattern.
 ---
 
 # bevy-rs — Bevy (Bevy-specific conventions)
@@ -25,27 +25,36 @@ the general `lele-syntax-rs` rules.
 
 ### Plugin struct + delegate separation
 
-The `Plugin` struct file holds data only; the `impl Plugin` body is an atomic delegate to a
-private sibling `<struct>_<method>.rs` method file (never `super::`).
+The `Plugin` struct file holds data only; the `Plugin::build` body is an atomic delegate
+whose body lives in the crate-root `__methods__/plugin/<method>.rs` (`LELE030`), never a
+private sibling and never `super::`. The trait impl co-locates with the type (`LELE042`)
+and forwards to the delegate shell:
 
 ```
 {{module}}/
-  plugin.rs         # struct Plugin + Default + atomic delegates
-  plugin_build.rs   # fn build(plugin, app) + test_usage   (PRIVATE)
+  plugin.rs                       # struct Plugin + Default + impl Plugin + shells
+__methods__/plugin/build_plugin.rs  # pub fn build_plugin(plugin, app) body + test_usage
 ```
 
 ```rust
 // {{module}}/plugin.rs
-use crate::{{module}};
 use bevy::prelude::*;
 
 pub struct Plugin;
 
 #[rustfmt::skip]
 impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) { {{module}}::plugin_build::build(self, app) }
+    fn build(&self, app: &mut App) { self.build_plugin(app) }
+}
+
+#[atomic_delegates]
+impl Plugin {
+    pub fn build_plugin(&self, app: &mut App) {}   // body: __methods__/plugin/build_plugin.rs
 }
 ```
+
+`lib.rs` mounts the crate-root bodies folder with
+`#[path = "../__methods__/mod.rs"] pub mod methods;`.
 
 ### Component / Resource / Message types
 
@@ -61,11 +70,19 @@ subdirectories; the derive conveys the role.
 **0.19 constraint:** `Resource` is now a subtrait of `Component`, so a type can no longer derive
 both `#[derive(Component)]` and `#[derive(Resource)]` — split shared data into distinct types.
 
-### Systems live in `bevy_systems/`
+### Systems live in `__bevy_systems__/`
 
-Registered systems are plain functions in `{{module}}/bevy_systems/`, file named after the
-function. `mod.rs` declares `pub mod bevy_systems;` and does **not** re-export systems at the
-domain root; `bevy_systems/mod.rs` flattens via `pub use`.
+Registered systems are plain functions in `{{module}}/__bevy_systems__/`, one item per file
+named after the function (`LELEBEVY002`). `mod.rs` mounts the dunder folder with
+`#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;` — Rust paths stay
+`{{module}}::bevy_systems::…` — and does **not** re-export systems at the domain root;
+`__bevy_systems__/mod.rs` flattens via `pub use`.
+
+```rust
+// {{module}}/mod.rs
+#[path = "__bevy_systems__/mod.rs"]
+pub mod bevy_systems;
+```
 
 ```rust
 // {{module}}/plugin_build.rs
@@ -101,9 +118,9 @@ When an action has multiple triggers, split pure core logic from the Bevy input 
 Test the core without a Bevy `App`.
 
 ```
-{{module}}/increment.rs          # pure fn increment(state, amount)
-{{module}}/increment_button.rs   # fn increment_button(Query, ResMut) -> calls increment
-{{module}}/increment_cli.rs      # fn increment_cli(...)            -> calls increment
+{{module}}/increment.rs                     # pure fn increment(state, amount)
+{{module}}/__bevy_systems__/increment_button.rs  # fn increment_button(Query, ResMut) -> calls increment
+{{module}}/increment_cli.rs                 # fn increment_cli(...)            -> calls increment
 ```
 
 ```rust

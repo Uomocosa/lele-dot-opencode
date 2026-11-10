@@ -52,15 +52,15 @@ batch, and a batch is "green" when it adds no finding beyond the baseline.
   behaviour matters (exemptions, prefix matching), read the checker, not only the summary.
 - A type that passes only through an exemption (e.g. a `Serialize` derive nobody uses, which
   silences `LELE026`) is a **finding**, not a pass. Never propose keeping or copying the dodge.
-- Known collisions to check: `methods/<type_snake>/` is keyed by type name, so two domains'
+- Known collisions to check: `__methods__/<type_snake>/` is keyed by type name, so two domains'
   `Plugin` types collide under `LELE030`; `LELE012` skips `__basic__/` files but the stutter is
   still a naming defect.
 
 ## 5. Conflicts between rule sets
 
-The linter is authoritative; skills are guidance. When two sources disagree (e.g. `bevy-rs`
-`plugin_build.rs` vs `LELE030` `methods/`, or `LELE026` vs a Bevy `Resource` that must wrap a
-`Vec`), **stop and ask the user** with the options laid out. Never resolve a conflict silently.
+The linter is authoritative; skills are guidance. When two sources disagree (e.g. `LELE026`
+vs a Bevy `Resource` that must wrap a `Vec`), **stop and ask the user** with the options
+laid out. Never resolve a conflict silently.
 
 ## 6. Proof of setup — first lines of the first reply
 
