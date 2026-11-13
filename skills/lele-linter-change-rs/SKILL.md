@@ -52,8 +52,12 @@ Skill files outside the linter repo that the plan changes (e.g. `lele-syntax-rs`
 
 ## 3. Fleet check (you, no edits)
 For every fleet repo:
-- run each lint target (`lele-lint <crate>`, `lele-bevy-lint <crate>`) and count errors per code;
-- run `cargo check --workspace --all-targets 2>&1`. Fleet repos depend on
+- run each lint target ON ITS OWN, exactly as its recipe line is written (some lines carry
+  `--config lele.toml`), and count errors per code. Never rely on `just lint` alone: it stops
+  at the first failing crate and hides the rest;
+- check that the repo compiles with its own recipe (`just build 2>&1`, or `just check` when
+  that is only a build). Plain `cargo` can fail in these repos, e.g. jemalloc breaks on the
+  space in `[R] Rust` unless the recipe's `CARGO_TARGET_DIR` is set. Fleet repos depend on
   `atomic-delegate-macros` and `lele-snake-case` **by path**, so a macro change breaks their
   compilation as soon as it lands.
 
