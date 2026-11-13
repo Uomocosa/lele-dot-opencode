@@ -32,6 +32,28 @@ Do not name, design, review, or edit Rust before both reads complete. Loading
 `lele_lint` enforces only the mechanically checkable rules; the judgement rules
 live ONLY in those two files.
 
+## Ponytail / minimal-code precedence (MUST)
+
+When Ponytail (or any "lazy senior dev", YAGNI, or minimal-code skill) is active in a
+crate checked by `lele-lint`, this order wins, top to bottom:
+
+1. `lele-lint` diagnostics (`LELE0xx`, `LELEBEVY0xx`) and the repo's `just lint`.
+2. `lele-syntax-rs` `RATIONALE.md` + `SMELLS.md`.
+3. The domain skill (`bevy-rs`, `libp2p`, `freenet`, `avian-rs`, ...).
+4. Ponytail.
+
+Ponytail's "no abstraction / wrapper / type conversion / shortest diff / deletion beats
+addition" applies only to *new, unrequested* abstraction. It never licenses avoiding or
+deleting linter-mandated shape: `single_field_newtype` + `Deref`, `__basic__/` placement,
+`#[atomic_delegates]` shells, `methods/<type>/<method>.rs`, `test_usage`, `thiserror`
+enums, `From`/`TryFrom`, and boundary honesty.
+
+Do not write `shortcut:` comments in `src/` or `methods/` (LELE031). Keep the ledger
+outside `src/` (`/ponytail-debt`), or use a `///` note in `constants.rs` only.
+
+"Trivial changes need no test" yields to LELE009: a file ends with a `test_usage` test or
+`// no test_usage necessary`. The clippy `#[allow]` gate is unchanged.
+
 ## Skill Architecture
 
 Skills live in `~/.config/opencode/skills/<name>/SKILL.md` and are organized into three tiers:

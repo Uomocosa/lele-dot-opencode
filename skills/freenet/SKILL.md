@@ -1,6 +1,6 @@
 ---
 name: freenet
-description: Use when developing Freenet contracts, delegates, or WebSocket clients, or when launching/wiring Freenet nodes. Docs links, the lele contract harness, and the non-obvious gotchas — idempotent merge, local-vs-network notifications, canonical wasm, replica-split bridging, node roles/ring.
+description: Use when developing Freenet contracts, delegates, or WebSocket clients, or when launching/wiring Freenet nodes. Docs links, the lele contract harness, and the non-obvious gotchas — idempotent merge, local-vs-network notifications, canonical wasm, replica-split bridging, node roles/ring, connection timing.
 ---
 
 # freenet — Contracts, Clients, and Nodes
@@ -27,6 +27,8 @@ Local references in this skill directory (load on demand — do **not** paste in
   the G-counter, scaling proof, trust split, and the **universal contract test suite**.
 - `references/*_CONTRACT_STRUCTURE.md` — worked contract shapes (delta, ping, website, river, atlas, raven).
 - `references/ring-and-discovery.md` — ring topology, node roles, `--gateway` flags, hermetic meshes.
+- `references/connection-timing.md` — what the node does while connecting, River's timings, measured
+  results, and how to test on one machine without fooling yourself.
 - `glossary/` — per-term nomenclature (`idempotent`, `crdt-g-counter`, `structural-summary`,
   `delta-empty-delta`, `lww`, `tombstone`, `ttl`, `window-cap`, `sharding-facade`, `allow-list-root-auth`, `logical-vs-wall-clock`).
 
@@ -64,9 +66,10 @@ Ok(UpdateModification::valid(serialize(&v)?))  Ok(UpdateModification::valid(seri
   (`serve_client_api_with_listener` + `NodeConfig` + `run_network_node`) whenever pub/sub matters.
 - **Absorbing a notification must MERGE** (max/union per key) for slot-map state — replacing the
   local map wipes foreign slots on every single-key tick (real production bug).
-- **Contract key = `Blake3(wasm_bytes)` + params.** A rebuild changes the key even for identical
-  source, so ship one canonical committed `.wasm` (embedded via `include_bytes!`); never rebuild
-  per deployment.
+- **Contract key = `Blake3(wasm_bytes)` + params.** Plain `rustc` release builds were byte-identical
+  on one machine, but a build inside `cargo clippy` inherits its wrapper and gives different bytes,
+  so a different key. Ship one canonical committed `.wasm` (embedded via `include_bytes!`), rebuilt
+  only by an explicit recipe, never from `build.rs`.
 - **Fresh-key concurrent `Put`s can split into disjoint replica groups** (anti-entropy is
   neighbor-pair-only, ~5-min heartbeat). Bridge from the client with a routed
   `ContractRequest::Subscribe { key, summary: Some(per_tag_summary) }` every ~30s; heals in
@@ -74,6 +77,17 @@ Ok(UpdateModification::valid(serialize(&v)?))  Ok(UpdateModification::valid(seri
 - **No request-response correlation.** After `Get { subscribe: true }` you may get
   `SubscribeResponse` then an `UpdateNotification` before `GetResponse` — loop on recv and skip
   unexpected variants.
+- **Do not wait for `ring_peers > 0` before a `Get`.** Requests work once the gateway handshake is
+  done (`transport_peers > 0`); shipped apps do not gate on the ring. A subscribing `Get` before the
+  handshake fails with `PeerNotJoined`.
+- **A `Get` can vanish for 60s, and `NotFound` may never arrive.** One peer gets it and the TTL is a
+  hardcoded 60s. Resend on silence, and seed with a `Put` after a bound (River: 20s) rather than
+  waiting for `NotFound`.
+- **Use `network_port: None` for a saved node folder.** A new port on relaunch can cost about 60s,
+  because gateways hold one connection per key.
+- **Measuring on one machine misleads.** Same-IP siblings and back-to-back runs both slow ring joins,
+  and mainnet drifts between sessions. Load `references/connection-timing.md` before changing
+  connect, fetch or deploy logic, or judging a timing.
 - **WebSocket connect can hang** — wrap `connect_async` in `tokio::time::timeout(5s, …)`.
 - **`tikv-jemalloc-sys` fails on a path with spaces** — keep the full `freenet` crate in
   `[dev-dependencies]` by default, and set `[build] target-dir = "/tmp/frt-build"` (with `jobs = 6`)

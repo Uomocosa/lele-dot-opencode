@@ -27,7 +27,7 @@ model plus how to use the linter. Do not memorise rules: ask the linter, and rea
   empty-bodied shells; bodies live in the crate-root `__methods__/<type_snake>/<method>.rs`
   (`LELE030` — mounted in `lib.rs` as `#[path = "../__methods__/mod.rs"] mod methods;`,
   private and never re-exported — bodies are reached through their type's methods, never
-  `methods::…`; a single-statement body is inlined under `#[rustfmt::skip]` instead). One
+  `methods::…`; a one-liner, or a single simple `match`/`if`/loop, is inlined instead). One
   `#[atomic_delegates]` block per `impl_item_order` group — constructor shells, `pub`
   shells, `pub(crate)` shells; no block mixes groups and `new` is never delegated (`LELE032`)
   — so hand-written impls sit between the blocks in the fixed order constructors →
@@ -119,6 +119,18 @@ impl UnixTime {
   `fn` allowed (`no_inner_fns`).
 - **Newtype purpose.** Wrap a scalar to carry an *invariant* or a *role*, never a synonym; a
   path (`PathBuf`) is already typed, so don't wrap it just to restate that (RATIONALE §12).
+- **Conversions take named types.** `Deck::from(deck::Capacity(52))`, never `Deck::from(52)`:
+  wrap a bare primitive argument in a role newtype first (primitive obsession). `async fn`,
+  `const fn` and generic-argument builders cannot be `From`/`TryFrom` and stay associated fns.
+  A ban on `From<primitive>` was dropped: it is advice, not a lint (RATIONALE §14).
+- **Collection wrappers.** No newtype around a collection unless it guards an invariant every
+  holder must respect (`Deck(Vec<Card>)`, at most 52 cards): then ask the user for a
+  `[[lele.lint.collection_wrappers]]` entry, keep the field private, derive `Deref` but not
+  `DerefMut` (RATIONALE §14).
+- **Body placement.** A one-liner goes inline under `#[rustfmt::skip]`; a single simple
+  `match`/`if`/loop or a 2–3 statement body goes inline in a plain `impl` block; anything else
+  goes to `__methods__/`. Never pad a body or change a signature to keep a file. Only the
+  user may add `[[lele.lint.no_delegates]]` (RATIONALE §15).
 - **Abstraction level.** A `struct`/`enum` name is a noun (the object), a `fn` name is a verb
   (the action), a `bool` is a question; only a *domain concept* name is short (1–2 words);
   internal machinery — even `pub`, which atomic files make almost everything — is named as

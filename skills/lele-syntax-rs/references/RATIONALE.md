@@ -443,3 +443,91 @@ Ousterhout–Martin discussion (*Method Length*); Martin, *Clean Code* ch. 3 and
 Liskov & Guttag, *Abstraction and Specification in Program Development* (the abstraction
 function); Dijkstra, *The Humble Programmer* (EWD340); Parnas, *On the Criteria To Be Used in
 Decomposing Systems into Modules*; `definition-abstraction`.
+
+## 14. Conversions take named types; a collection wrapper guards an invariant
+
+**A conversion's argument is a named type, never a bare primitive.** `impl From<usize> for
+Deck` compiles, but `Deck::from(52)` does not say what 52 is. Name the argument with a
+newtype in the domain's `__basic__/` and convert from that — this is the cure for *primitive
+obsession* (SMELLS S1) at the one place it hurts most, the call site:
+
+```rust
+// BAD — what is 52? cards, capacity, a seed?
+let deck = Deck::from(52);
+
+// GOOD — the argument says what it is; the conversion keeps its standard name
+let deck = Deck::from(deck::Capacity(52));
+let deck = Deck::try_from(deck::Saved(path))?;
+```
+
+The newtype follows §12: it carries a *role* (`Capacity`, `Saved`), never a synonym.
+`conversion_is_from` (LELE036) reports the one-argument builder and, when the argument is a
+bare primitive, tells you to name it first.
+
+`&Path` arguments are fine as they are: the type already says what the value is.
+
+A rule "no `From<primitive>` for a crate type" was considered and dropped. Naming the argument
+is advice only, deliberately not enforced: do not add a lint or a `#[deny]` for it.
+
+**Three builders cannot be a `From`/`TryFrom` and stay associated fns.** The linter exempts
+them; do not try to force them into a trait impl:
+
+- `async fn` — a trait conversion cannot `.await`.
+- `const fn` — `From::from` is not `const`, so the value could no longer be built in a constant.
+- a generic argument (`impl Into<String>`, or a type parameter of the fn) — a blanket
+  `impl<T: …> From<T>` collides with std's `impl<T> From<T> for T`.
+
+**A collection wrapper exists only to guard an invariant.** `Rooms(Vec<Room>)` adds a name
+and nothing else: delete it and pass `Vec<Room>` (`no_collection_newtype`, LELE026). A
+wrapper earns its place when the collection has a rule *every* holder must respect — a size
+cap, an ordering, uniqueness. `Deck(Vec<Card>)` with at most 52 cards is such a type, and
+refusing it would throw away a good abstraction. The test: can you state the rule in one
+sentence, and would breaking it be a bug? If yes:
+
+1. Ask the user for a `[[lele.lint.collection_wrappers]]` entry in `lele.toml` (`type`,
+   `file`, `reason` — the reason is that one sentence; `file` is relative to `lele.toml`). The
+   entry is the user's decision, never the agent's. Bevy `Resource` types are exempt: Bevy
+   needs a named type for them.
+2. Shape the type so the rule can actually hold: a **private** field, `#[derive(Deref)]`
+   for read access but **no `DerefMut`**, and the check in `TryFrom` or the type's own
+   methods (inside them, reach the collection with `let Self(cards) = self;`).
+
+```rust
+#[derive(Deref)]
+pub struct Deck(Vec<Card>);
+
+impl TryFrom<Vec<Card>> for Deck {
+    type Error = TooManyCards;
+    fn try_from(cards: Vec<Card>) -> Result<Self, Self::Error> { /* rejects more than 52 */ }
+}
+```
+
+A wrapper over unsigned integers (`Bytes(Vec<u8>)`) needs no entry: neither `u8` nor
+`Vec<u8>` says what the bytes are, so the name is the whole point.
+
+Enforced: `conversion_is_from` (LELE036), `no_collection_newtype` (LELE026). The choice of
+*which* collections deserve a wrapper stays judgement, gated by the user's `lele.toml` entry.
+
+## 15. A one-line body stays inline — never pad to keep a delegate
+
+The linter asks rustfmt, not the author's line breaks, which home a method body gets:
+
+- **A one-liner** (one statement rustfmt prints on one line) sits inline under
+  `#[rustfmt::skip]`.
+- **A single simple `match`/`if`/loop** (each arm one expression, no nested `match`/`if`/loop;
+  control words inside macro args don't count), or a body of **2 or 3 statements**, sits in a
+  plain `impl` block so rustfmt formats it.
+- **Anything else** lives in `__methods__/<type>/<method>.rs` with a real `test_usage`.
+
+When the linter reports a delegate that is a one-liner or a single simple block
+(`methods_layout`, LELE030), inline it in the type file and delete the file. **Never** split
+one statement into `let x = <expr>; <use of x>`, add a guard that does nothing, or change a
+method's signature (for example make it return a value) to reach more statements: that
+satisfies the check and defeats the rule.
+
+`[[lele.lint.no_delegates]]` (crate plus reason) is the one exception: a crate that cannot
+depend on `atomic-delegate-macros` (for example `lele-snake-case`) may keep the
+anything-else methods in a plain `impl` block. The entry is the user's decision, never the
+agent's.
+
+Enforced: `atomic_delegates` (LELE017), `methods_layout` (LELE030).
