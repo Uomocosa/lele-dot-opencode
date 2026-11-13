@@ -28,6 +28,18 @@ Learn a rule ONLY from `--explain`, each error's `help:` line and the `lele-lint
 Never read the linter's own source code (`lele-rust-linter/crates/...`) to work out what
 passes the check: the goal is code that follows the rule, not code that slips past it.
 
+## Orchestrated mode
+When the brief says **orchestrated** (from `lele-linter-change-rs`), these rules override the
+ones below:
+- Never run cargo, or `just build|test|clippy|check|ci`. Steps 5 and 5b use only the linter:
+  lint again, compare counts per code, and fix any regression.
+- Config entries the brief names exactly (file + entry) may be added; nothing else in config.
+- When the crate is lint-clean, report **"ready for gate"**: per-code counts before/after,
+  files touched, rename-follow files, open questions. Then wait.
+- When the orchestrator grants a gate permit: run the gate it names in the foreground, fix
+  any red result (lint again, ask for a new permit if you had to edit), then `git add` only
+  your files, commit and push. Git writes are allowed for that commit only.
+
 ## Loop
 0. Once, before any edit: save `git status --short` to a scratch file (baseline).
 1. Lint the crate. Count errors per code. 0 errors → **Done**.
@@ -42,7 +54,7 @@ passes the check: the goal is code that follows the rule, not code that slips pa
    create or edit" list. Most often: a helper that becomes a method keeps at most 3
    statements inline (`#[rustfmt::skip]` block, no constructors in it); a longer one goes
    behind an empty shell in the type's `#[atomic_delegates]` block with its body and a
-   `test_usage` test in `methods/<type>/<fn>.rs`.
+   `test_usage` test in `__methods__/<type>/<fn>.rs`.
    LELE031 (comments): never just delete a comment. First move what it says into the code:
    rename the item so its name says it, or, when it explains *why* (an edge case, a format
    quirk), add an assertion to the `test_usage` test that proves it. Then delete it.
@@ -51,7 +63,7 @@ passes the check: the goal is code that follows the rule, not code that slips pa
    up, or a new code appeared in a file you edited, your edit caused it: fix those errors now,
    before picking the next code. A code is finished only when the TOTAL went down.
 6. Diff `git status --short` against the baseline: every path that is new or changed since
-   the baseline must be under `<crate path>/src/` or `<crate path>/methods/`, or be a
+   the baseline must be under `<crate path>/src/` or `<crate path>/__methods__/`, or be a
    rename-follow edit in `<crate path>/tests|benches|examples/`. Anything else
    → STOP and report (do not revert it yourself).
    Exception: `Cargo.lock` changes made by `cargo`/`just` (dependency re-resolution) are
@@ -63,7 +75,7 @@ passes the check: the goal is code that follows the rule, not code that slips pa
   `git stash`, `git clean`, `git rm`, `git mv` or `git add` during the loop. The working tree
   holds other people's uncommitted work; reverting a file you "broke" destroys it. To undo your
   own edit, re-edit the file by hand.
-- **Write scope = `<crate path>/src/` and `<crate path>/methods/`**, plus the
+- **Write scope = `<crate path>/src/` and `<crate path>/__methods__/`**, plus the
   rename-following exception below. Never edit: the repo root (`Cargo.toml`, `lele.toml`,
   `justfile`, `README.md`, `prek.toml`),
   `lele-lint-test-crates/`, `expected.toml`, `RULES.md`/`SKILL.md` (only `just docs` may write
