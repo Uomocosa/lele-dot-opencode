@@ -90,6 +90,11 @@ impl UnixTime {
   the file that defines the type (`cfg(feature)` impls included); blanket impls and impls
   for foreign types live in the trait's `__traits__/` file. A `__basic__` type is a
   container item and keeps no impls — graduate it to its own `<type>.rs` first.
+- **Trait impl methods are placed like inherent ones** (`LELE017`): one-liner, simple block,
+  or `__methods__/<type>/<trait>_<method>.rs` (prefix dropped when the method already starts
+  with the trait name: `from_celsius.rs`, `visit_item_mod.rs`). A per-method shell names its
+  trait: `#[atomic_delegate(Foo, Rule)]`. Exempt: `impl Default`, and methods listed in
+  `[[lele.lint.inline_trait_methods]]`, which must stay inline (`LELE043`).
 - **Imports.** Import the domain and qualify: `use crate::stock;` then `stock::Item`.
   The one exception is a trait: import it with `use crate::stock::traits::Greetable;`
   so its methods are callable. `super::` is allowed only inside `#[cfg(test)]`;
