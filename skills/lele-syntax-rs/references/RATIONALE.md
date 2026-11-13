@@ -33,7 +33,10 @@ similar signature, the caller still has to read it: that is a layer, not an abst
 
 This limit judges *designed* seams only. A `#[atomic_delegates]` shell is a one-line
 forwarder **on purpose** (`method_file_co_location` requires the split); shape-only items
-(`From`, `Deref`, trait impls) and thin I/O adapters (§3) are likewise exempt. Deleting an
+(`From`, `Deref`, trait impls) and thin I/O adapters (§3) are likewise exempt from this
+depth limit. (Placement is a separate matter: trait impl methods ARE placed by
+`atomic_delegates` like inherent ones — only `impl Default` and methods listed in
+`[[lele.lint.inline_trait_methods]]` stay inline.) Deleting an
 atomic delegate is deleting the architecture, not an abstraction (§13, *Limits*).
 
 Enforced in part by **`helpers_are_methods`** (no private `fn`: a helper is a `pub(crate)` method

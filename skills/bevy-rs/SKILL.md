@@ -23,35 +23,44 @@ the general `lele-syntax-rs` rules.
 
 ## How we use Bevy here
 
-### Plugin struct + delegate separation
+### Plugin lifecycle methods stay inline (`LELE043`)
 
-The `Plugin` struct file holds data only; the `Plugin::build` body is an atomic delegate
-whose body lives in the crate-root `__methods__/plugin/<method>.rs` (`LELE030`), never a
-private sibling and never `super::`. The trait impl co-locates with the type (`LELE042`)
-and forwards to the delegate shell:
+Trait impl methods follow the same `atomic_delegates` placement as inherent ones (`LELE017`),
+except the methods listed in `[[lele.lint.inline_trait_methods]]`. Every Bevy repo lists the
+`Plugin` lifecycle methods there, so `build` / `ready` / `finish` / `cleanup` are written in
+the trait impl, next to the plugin struct: the impl is the plugin's wiring manifest. Never
+delegate them, never forward them to an inherent `build_plugin` shell (`LELE043` rejects both).
+The trait impl co-locates with the type (`LELE042`).
 
-```
-{{module}}/
-  plugin.rs                       # struct Plugin + Default + impl Plugin + shells
-__methods__/plugin/build_plugin.rs  # pub fn build_plugin(plugin, app) body + test_usage
+```toml
+# lele.toml
+[[lele.lint.inline_trait_methods]]
+trait   = "bevy::app::Plugin"
+methods = ["build", "ready", "finish", "cleanup"]
+reason  = "plugin lifecycle methods are the plugin's wiring; read them next to the plugin struct"
 ```
 
 ```rust
 // {{module}}/plugin.rs
 use bevy::prelude::*;
+use crate::{{module}};
 
 pub struct Plugin;
 
-#[rustfmt::skip]
 impl bevy::prelude::Plugin for Plugin {
-    fn build(&self, app: &mut App) { self.build_plugin(app) }
-}
-
-#[atomic_delegates]
-impl Plugin {
-    pub fn build_plugin(&self, app: &mut App) {}   // body: __methods__/plugin/build_plugin.rs
+    fn build(&self, app: &mut App) {
+        app.init_resource::<{{module}}::NetworkState>()
+            .add_systems(FixedUpdate, (
+                {{module}}::bevy_systems::poll_network,
+                {{module}}::bevy_systems::broadcast,
+            ));
+    }
 }
 ```
+
+Other trait methods with long bodies are delegated like inherent ones; their body file is
+trait-prefixed: `__methods__/<type>/<trait>_<method>.rs` (e.g. `display_fmt.rs`), unless the
+method already starts with the trait name (`from_celsius.rs`, `visit_item_mod.rs`).
 
 `lib.rs` mounts the crate-root bodies folder with
 `#[path = "../__methods__/mod.rs"] mod methods;` (private, never re-exported — bodies are
@@ -85,19 +94,6 @@ stay `{{module}}::bevy_systems::…` — and never re-exports a system at the do
 pub mod bevy_systems;
 ```
 
-```rust
-// {{module}}/plugin_build.rs
-use crate::{{module}};
-use bevy::prelude::*;
-
-pub fn build(_plugin: &{{module}}::Plugin, app: &mut App) {
-    app.init_resource::<{{module}}::NetworkState>()
-       .add_systems(FixedUpdate, (
-           {{module}}::bevy_systems::poll_network,
-           {{module}}::bevy_systems::broadcast,
-       ));
-}
-```
 
 `FixedUpdate` for fixed-timestep game logic, `Update` for per-frame UI/input.
 
