@@ -534,3 +534,31 @@ anything-else methods in a plain `impl` block. The entry is the user's decision,
 agent's.
 
 Enforced: `atomic_delegates` (LELE017), `methods_layout` (LELE030).
+
+## 16. Each crate adds only what it owns
+
+When several crates contribute to one thing (a plugin set, a test driver, a CLI, a report),
+each crate adds **only the part about its own types**, and the place that composes them
+(an app's `main`, a test binary) is the only one that sees them all. The shared crate offers
+an extension point (a trait, a builder `.with(..)`), never a list of its users.
+
+- The core crate never names a downstream type or feature ("lobby", "starboard").
+- A downstream crate never reaches into another's internals to report on them; it asks
+  for that crate's contribution.
+- An example stays an example: test-only contributions live with the tests that use them
+  (`tests/<area>/`), not in the example.
+
+```rust
+// judgement: core offers the seam; each crate fills in its own part; the composer wires them
+pub trait E2EMethods { fn register(&self, remote: RemotePlugin) -> RemotePlugin; }
+
+E2EDriverPlugin::new(port)
+    .with(lobby_room::testing::LobbyE2EMethods)   // owned by the lobby-room crate
+    .with(StarboardE2EMethods);                   // owned by tests/e2e/starboard
+```
+
+Signal: a crate's file imports another crate's types only so it can describe them, or a
+shared crate gains a `match` on who is using it. Move that code to the crate that owns the
+types.
+
+Judgement only; not enforced. Related: §4 (group by feature), §13 (abstraction).
