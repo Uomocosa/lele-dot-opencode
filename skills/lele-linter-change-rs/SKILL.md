@@ -14,7 +14,10 @@ work, run the fleet check and hand out gate permits.
   `claude-code-self-orchestrator`, else `opencode-orchestrator`. Load that skill and follow
   it for HOW to brief, launch, resume (`SendMessage` / opencode resume) and verify workers.
   This skill only says WHAT the steps are. Both setups support resuming a worker later, and
-  permits depend on that.
+  permits depend on that. Worker kind (orchestrator-core §0): the linter change follows a
+  decided plan, so EfficientWorker by default; a linter worker that has to diagnose a false
+  positive, and the fleet fix workers, are SmartWorker when the fix needs judgement and
+  EfficientWorker when it is a mechanical rule fix.
 - **Plan** = the rest of the arguments (text, or a path to a plan file). The design is
   already decided: never redesign it. A decision the plan leaves open → ask the user before
   step 1. A decision that follows directly from the plan (e.g. a macro argument the naming
