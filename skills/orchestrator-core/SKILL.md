@@ -52,10 +52,11 @@ When a worker fails (wrong result, stuck, or "blocked"), after the FIRST failure
    A dirty tree you did not expect → ask the user before starting.
 3. **One editing worker at a time per directory.** Read-only plan workers may run in parallel.
 4. Split big requests into steps (A, B, C…), each one commit-sized. Keep a short plan file in the
-   session scratchpad (never loose in `/tmp`: it can be cleaned and the plan is lost) and point
+   shared work dir `<repo>/.local-run/orchestrator/<YYYY-MM-DD>-<topic>/` (see AGENTS.md; never a
+   session scratchpad, `/tmp`, `~/.claude` or `~/.opencode`: workers get permission prompts) and point
    workers at it. Log each step's outcome there as you go (hash, worker kind + model, tokens,
    tool calls, minutes, decisions): it survives your own context compaction.
-5. **Write a shared `worker-env.md` in the scratchpad before the first brief**: PATH prefix,
+5. **Write a shared `worker-env.md` in the shared work dir before the first brief**: PATH prefix,
    target/build dirs, how to run the gate and any special runs (displays, env vars), commit
    message rules, the evidence rule, and the **background budget**:
    - at most 2 background runs per step (the slow test suite and the push); everything else
@@ -92,7 +93,7 @@ code. Include:
   Co-Authored-By trailer) and push — only if the user allowed commits; otherwise "leave the
   change uncommitted". Run each gate step once: if a hook already runs the slow suite, do not
   also run it by hand. Never `--no-verify`.
-- **Report**: the worker writes the full report to a scratchpad file and hands back only the
+- **Report**: the worker writes the full report to a file in the shared work dir and hands back only the
   hash, a 3-line summary, the file path and open questions last.
 
 ### Plan first for anything bigger than ~3 files or with an open design

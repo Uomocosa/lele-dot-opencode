@@ -131,3 +131,18 @@ Whenever ANY response discusses code, behavior, structure, or a fix — in MOST 
 - Format: fenced block with language tag (```rust, ```toml, ```nix, ```bash), minimal and copy-pasteable. Show real code, never a hypothetical sketch.
 - Grounding: new code is labelled `proposed` + target path.
 - No-snippet responses about code are forbidden. If you cannot show code, you MUST name the exact file you would need to read first and stop.
+
+---
+
+## Shared work directory (orchestrator + workers)
+
+Plans, briefs, reports, logs and any scratch files for a task go in
+`<repo>/.local-run/orchestrator/<YYYY-MM-DD>-<topic>/` inside the repo being worked on
+(`.local-run/` is gitignored). Both the orchestrator (Claude Code) and opencode workers read
+and write there, so nobody hits an outside-the-project permission prompt.
+
+- Never create task files in `~/.claude/`, `~/.opencode/`, `~/.config/`, `/tmp`, or a
+  session-private scratchpad.
+- If `.local-run/` is not in the repo's `.gitignore`, add it before writing anything.
+- A read-only plan worker (`--agent plan`) that cannot write files puts the plan in its final
+  message; the orchestrator saves it to the shared directory.
