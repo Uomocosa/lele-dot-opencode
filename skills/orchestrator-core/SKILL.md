@@ -66,6 +66,29 @@ When a worker fails (wrong result, stuck, or "blocked"), after the FIRST failure
    - never hand back while a build or test run is still going.
    Every brief starts with "read worker-env.md first".
 
+## 1b. Job size: keep the leash tight
+
+The orchestrator splits the work; a worker never gets more than one job.
+
+- **One job = one concern, one commit**, about ≤ 8 files edited and ≤ ~45 min of work. A brief
+  that says "commit 1, then 2, then 3" is too big: write three briefs, run them one after another.
+- Plan-sized requests: SmartWorker plans (read-only), then one EfficientWorker job per commit of
+  that plan, each with its own leash (the exact files of that commit).
+- After every job the orchestrator reads the diff before the next job starts. A worker that
+  diverged costs one job, not the whole request.
+
+### Verification tiers (do not make every worker run every gate)
+
+| Tier | Who runs it | What |
+|---|---|---|
+| fast | the editing worker, every job | build/check + clippy + lint of the crates it touched (foreground) |
+| full | once per batch of jobs: the orchestrator, or a dedicated **verify worker** (EfficientWorker, read-only + run gates, writes a gate report) | full unit suite, slow e2e suites, pre-push hooks |
+
+- Editing jobs commit locally after the fast tier; **push only after the full tier is green**.
+- A full-tier failure → bisect over the batch's commits (orchestrator or verify worker), then a
+  fix job for the culprit commit.
+- Slow suites never run inside an editing job unless the job is about that suite.
+
 ## 2. Write the brief
 
 A cheap model needs everything spelled out. Before writing it, **map the code yourself**: open
