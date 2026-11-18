@@ -33,12 +33,12 @@ licence to delete linter-mandated shape.
   unrequested abstraction. Keep `single_field_newtype` + `Deref`, `__basic__/` placement,
   `From`/`TryFrom`, `derive_more::From`, and `thiserror` enums.
 - **"Shortest diff / deletion beats addition."** Keep atomic files, `#[atomic_delegates]`
-  shells, `methods/<type>/<method>.rs`, `test_usage`, and boundary structure.
+  shells, `__methods__/<type>/<method>.rs`, `test_usage`, and boundary structure.
 - **"One line if a reader gets it."** Obey `LELE017` (at most 3 statements inline) and
-  `LELE030` (method body in `methods/`).
-- **"Trivial changes need no test."** Obey `LELE009`: every non-trivial file ends with a
+  `LELE030` (method body in `__methods__/`).
+- **"Trivial changes need no test."** Obey `LELETEST003`: every non-trivial file ends with a
   `test_usage` test or `// no test_usage necessary`.
-- **`shortcut:` comments.** `LELE031` bans comments in `src/` and `methods/`. Keep the
+- **`shortcut:` comments.** `LELE031` bans comments in `src/` and `__methods__/`. Keep the
   ledger outside `src/`, or use a `///` note in `constants.rs` only.
 - **"Lean" review findings.** Never delete `#[atomic_delegates]` shells, `__basic__` types,
   single-field newtypes, state-machine types (`State`/`Input`/`Output`/`update`), or
