@@ -597,3 +597,33 @@ let row = lobby_row(2, 0);
 
 Judgement only; the location is enforced by **LELETEST005/LELETEST006**. Related: SMELLS S9,
 §16 (each crate adds only what it owns).
+
+## 18. Corner cases of an honest method are `#[rstest]` cases
+
+An **honest** method (deterministic, no hidden state, no I/O: see `definition-function-taxonomy`)
+maps inputs to outputs, so its corner cases are rows of one table. Write them as one
+`#[rstest]` with `#[case(..)]` rows next to `test_usage`, not as a pile of near-identical
+`#[test]` fns. A **dishonest** method (time, network, a Bevy `World`, channels, async) is tested by
+scenarios with setup; a plain `#[test]` / `#[tokio::test]` per scenario is right there, and a
+one-case `#[rstest]` wrapper is ceremony.
+
+```rust
+// honest: __methods__/peer_id/short.rs
+#[rstest]
+#[case("12D3KooWabcdef", "12D3…cdef")]
+#[case("short", "short")]
+#[case("", "")]
+fn short_truncates_long_ids(#[case] id: &str, #[case] expected: &str) {
+    assert_eq!(PeerId::from(id).short(), expected);
+}
+
+// dishonest: __methods__/swarm/dial.rs: one scenario, plain test
+#[tokio::test]
+async fn dial_reaches_a_listening_peer() { /* two swarms, dial, await the event */ }
+```
+
+Signal: two or more `#[test]` fns in one file whose bodies differ only by literals: fold them
+into `#[case]` rows.
+
+Judgement only, not enforced: telling honest from dishonest needs the MIR taxonomy
+(`lele-rust-function-taxonomy`), so no lint rule (test-structure plan D9/D10). Related: §17.
