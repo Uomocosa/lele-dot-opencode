@@ -627,3 +627,34 @@ into `#[case]` rows.
 
 Judgement only, not enforced: telling honest from dishonest needs the MIR taxonomy
 (`lele-rust-function-taxonomy`), so no lint rule (test-structure plan D9/D10). Related: §17.
+
+## 19. How to write tests here
+
+- One `test_usage` per file (LELETEST007), no length cap. It shows real use:
+  | file | `test_usage` shows |
+  |---|---|
+  | `<type>.rs` | constructs the type / calls one of its methods |
+  | `__methods__/<type>/<method>.rs` | that one method |
+  | `*_plugin.rs` | the plugin added explicitly (`TestApp::new().with_plugin(X)` / `add_plugins(X)`) |
+  | inline one-liner in `<type>.rs` | covered by the struct's `test_usage` |
+  | `__basic__/`, plain data, `__bevy_systems__/` | no tests |
+- Never `let _ = method;` or `assert!(true)` — the call and an assertion on what it
+  produced (or its receiver, when it returns `()`) are the test (LELETEST007).
+- Other tests in the file are free-named corner cases; they are not `test_usage`.
+- Constants are tuned in `constants.rs`, never asserted (D8): assert the behaviour.
+- Honest method corners: one `#[rstest]` with `#[case]` rows (§18).
+- Dishonest code (time, network, `World`, io): split core/shell (§3); fake at the
+  boundary via `testing/__fakes__` (`FakeWireFraming`, `LocalCheckpointBoard`); if neither
+  is possible, it is an e2e test under a listed `e2e_test_dirs` (`tests/`), not a unit test.
+- A file whose primary item cannot run in a unit test (network, live rustc `TyCtxt`,
+  print-only shell with no produced value) ends with `// no test_usage necessary`;
+  it is covered by e2e tests.
+- Tests never touch the real user environment: a test that runs a child process or writes
+  config sets `HOME`/`XDG_CONFIG_HOME`/`GIT_CONFIG_GLOBAL` to a temp dir.
+- Helpers go to `testing/` role dunders (`__app__`, `__queries__`, `__fixtures__`,
+  `__fakes__`) and are reused (LELETEST006; §17, SMELLS S9); a test module
+  holds only tests, `use`, `const` (LELETEST005).
+- One test module per file; previews may keep a module in `__bevy_systems__/` (D12).
+
+Enforced in part by **`test_inline`** (inline tests only), **`no_dunder_tests`** (no tests in
+`__basic__/`), **`test_usage`** (every file), **LELETEST005/LELETEST006/LELETEST007**. Related: §17, §18, SMELLS S9.

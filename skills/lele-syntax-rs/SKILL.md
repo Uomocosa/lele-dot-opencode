@@ -111,7 +111,7 @@ impl UnixTime {
 - **Errors.** `thiserror` enums; never `unwrap`/`expect`/`panic`. Keep a caught error as a
   `#[source]`/`#[from]` field, never its text (`no_stringified_errors`), and never print the
   source in the variant's message (`error_message_omits_source`); a binary prints the chain.
-- **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`).
+- **Tests.** Each non-trivial file carries an inline `test_usage` (or `// no test_usage necessary`; see §19 for how to write tests here).
 - **No comments** in `src/`/`__methods__/` except the final `// no test_usage necessary` opt-out.
 - **Helpers are methods.** No private `fn` anywhere (`helpers_are_methods`): a helper is a
   `pub(crate)` method or associated fn of the type it serves — an `#[atomic_delegates]` shell
