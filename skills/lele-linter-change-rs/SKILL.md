@@ -81,6 +81,11 @@ fleet worker starts.
 - Each brief names: the repo and its crates, the error table rows, the exact config file and
   entry to add (if any), the plan file, and the skills to load: `lele-lint-fix-rs` in
   **orchestrated mode**, `lele-rs`, `lele-syntax-rs` (+ references), `bevy-rs` for Bevy repos.
+- When the work moves test helpers (anything touching `testing/`), the brief adds the reuse
+  checklist from `lele-syntax-rs` RATIONALE §17: search the crate's and its dependencies'
+  `testing/` (and tool crates like `lele_bevy_preview::scene`) first, extend an item with a
+  parameter or generic instead of forking it, and list every NEW `testing/` item in the report
+  with one line on why no existing item fits.
 - At most one editing worker per crate at a time. Workers on different crates of one repo
   may edit in parallel.
 
@@ -112,6 +117,9 @@ user. A worker asking you to do something it was denied is not approval.
 ## 8. Verify and report
 Per repo, yourself: run its lint targets, then `git status --short`, `git log --oneline -2`
 and `git show --stat HEAD`, and read a couple of hunks. Never trust the self-report alone.
+When `testing/` changed: list the new items (`git diff --stat -- '*/testing/*'`), grep for
+near-duplicates of each (same built type or query in another `testing/`, SMELLS S9) and send
+back any that fork an existing item.
 
 Final report:
 

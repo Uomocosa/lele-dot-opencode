@@ -562,3 +562,38 @@ shared crate gains a `match` on who is using it. Move that code to the crate tha
 types.
 
 Judgement only; not enforced. Related: §4 (group by feature), §13 (abstraction).
+
+## 17. Test helpers live in `testing/` — reuse before you add
+
+A test module holds only tests, `use` and `const` (LELETEST005); everything a test needs
+besides that — an app builder, a world query, a fixture, a fake — lives in the crate's
+`src/testing/`, in `__app__/`, `__queries__/`, `__fixtures__/` or `__fakes__/` (LELETEST006).
+There is no usage-count rule: a helper used by a single test still goes there. What keeps
+`testing/` small is reuse, checked by judgement:
+
+1. **Search first.** Before adding an item, look in this crate's `testing/`, in the
+   `testing` modules of its dependencies (`freenet_libp2p_bevy_core::testing`,
+   `lele_bevy_state_machine::testing`, ...) and in tool crates' public API
+   (`lele_bevy_preview::scene::*` for previews).
+2. **Generalise, don't fork.** If an item almost fits, give it a parameter or a generic
+   (`find_one::<C>`, `hover::<C>`, a `LobbyRow` fixture taking `occupants, friends`) rather than
+   adding a near-duplicate. Name it for what it builds, not for the test that first used it.
+3. **One-off is fine when** nothing reusable exists yet (it is the first of its kind; the
+   next test reuses it), or another crate needs it (a `testing` module consumed downstream
+   has no in-repo users at all — that is why there is no count rule).
+4. **Tool-level helpers go to the tool.** Something every preview or every Bevy test could use
+   (a preview clock, faked hover) belongs in the tool crate's public API, not in one
+   app crate's `testing/`.
+
+```rust
+// BAD: a private copy of an existing fixture, named after its first user
+mod tests {
+    fn alpha_row_for_pulse_test() -> LobbyRow { /* same as testing::lobby_row */ }
+}
+// GOOD: reuse (or extend) the shared fixture
+use crate::testing::lobby_row;
+let row = lobby_row(2, 0);
+```
+
+Judgement only; the location is enforced by **LELETEST005/LELETEST006**. Related: SMELLS S9,
+§16 (each crate adds only what it owns).

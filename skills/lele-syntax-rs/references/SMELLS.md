@@ -246,3 +246,23 @@ One word, one meaning: never give a word already used in the codebase a second m
 
 Judgement only. Related: RATIONALE §2 (ubiquitous language), §13 (two kinds of wide-scope
 name), S7.
+
+## S9. Near-duplicate test helper
+
+A new `testing/` item (or an inline closure repeated across previews) that does what an
+existing one already does, with a different name or one hard-coded value. Two copies drift,
+and the next test picks whichever it finds first.
+
+```rust
+// BAD: two fixtures that differ by one literal
+pub fn spawn_alpha_room(world: &mut World) { spawn_room(world, "alpha", 2) }
+pub fn spawn_full_room(world: &mut World)  { spawn_room(world, "alpha", 8) }
+// GOOD: one fixture, the varying value is a parameter
+pub fn spawn_room(world: &mut World, name: &str, occupants: usize) { /* ... */ }
+```
+
+Signal: before adding to `testing/`, grep the crate's and its dependencies' `testing/`
+for the type you are building or querying; a hit means extend it. A single-use helper is
+fine when nothing similar exists or another crate needs it (RATIONALE §17).
+
+Judgement only; not enforced.
