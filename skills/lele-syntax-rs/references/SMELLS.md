@@ -266,3 +266,29 @@ for the type you are building or querying; a hit means extend it. A single-use h
 fine when nothing similar exists or another crate needs it (RATIONALE §17).
 
 Judgement only; not enforced.
+
+## S10. Test lookup after the action
+
+A test that runs its actions (`app.update()`, a scripted sequence, `sut.handle(...)`) and only
+then looks up the entities it acted on. The reader meets the action before knowing what
+exists, and a lookup placed after the action silently depends on the entity not having moved
+or changed in between. Order every test: **setup → look up → act → assert**.
+
+```rust
+// BAD — the action runs before the reader knows which entity it is about
+let mut app = test_app_with(Bears::default());
+app.update();
+let bears = single_entity::<Bears>(&mut app);
+app.world_mut().write_message(Attack { attacker: bears });
+// GOOD — look up first, then act, then assert
+let mut app = test_app_with(Bears::default());
+let bears = single_entity::<Bears>(&mut app);
+app.update();
+app.world_mut().write_message(Attack { attacker: bears });
+```
+
+Exception: an entity that only exists after an action (a spawned token, a moved card) is
+looked up right after the step that creates it, with a short comment saying why.
+Repo skills may add their own concrete form (e.g. verdigris-style §3 for `MockGame`).
+
+Judgement only; not enforced.
