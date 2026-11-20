@@ -99,6 +99,9 @@ pub mod bevy_systems;
 
 ### Testing with `App`
 
+If the crate has a `testing/` module, build state through it (lele-syntax-rs RATIONALE §20);
+the bare `App` below is for crates with no `testing/` yet, or for code `testing/` itself depends on.
+
 ```rust
 let mut app = App::new();
 app.world_mut().spawn((Owner(PeerId::random()), ClickCounter { count: 0 }));
@@ -112,7 +115,8 @@ assert_eq!(counter.count, 1);
 ### Command pattern: core logic + wrapper systems
 
 When an action has multiple triggers, split pure core logic from the Bevy input wrappers.
-Test the core without a Bevy `App`.
+Test an honest core directly; a core that still takes `Query`/`Res` is tested through the
+crate's `testing/` (RATIONALE §20).
 
 ```
 {{module}}/increment.rs                     # pure fn increment(state, amount)

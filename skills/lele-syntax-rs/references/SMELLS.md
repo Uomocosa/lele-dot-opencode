@@ -292,3 +292,44 @@ looked up right after the step that creates it, with a short comment saying why.
 Repo skills may add their own concrete form (e.g. verdigris-style §3 for `MockGame`).
 
 Judgement only; not enforced.
+
+## S11. Bare world in a test
+
+A test hand-builds a `World`/`App`/`SystemState`, or a domain object (a card, a player, a
+config), when `testing/` has a helper for it or should have one.
+
+```rust
+// BAD: hand-built world in a test module outside testing/
+let mut world = World::new();
+world.spawn(cards::creature("Grizzly Bears", 2, 2));
+// GOOD: use (or add) the testing/ helper
+let mut app = testing::game_with(testing::GRIZZLY_BEARS);
+```
+
+Fix: use or add the `testing/` helper (RATIONALE §20).
+
+Signal: `World::new()`, `SystemState::new`, or a constructor of a fixture-backed type
+inside `#[cfg(test)]` outside `testing/`.
+
+Exceptions as in RATIONALE §20.
+
+Judgement only; not enforced.
+
+## S12. Same scenario tested twice
+
+Two tests with the same inputs (same cards/setup) asserting the same result at different
+levels (a method test and a rule test, or a rule test and a `tests/` scenario).
+
+```rust
+// BAD: the rule test replays the method test's case with the same fixture and value
+power_of_returns_2_for_grizzly_bears();   // method test_usage
+grizzly_bears_has_power_2();              // rule test, same fixture, same assert
+// GOOD: the method test_usage stays the smallest real call; the rule test covers
+// a behaviour the method test cannot express, or the duplicate is deleted
+```
+
+Fix: keep the one at the level that owns it (RATIONALE §21), shrink or delete the other.
+
+Signal: grep the tests for the same fixture set + the same asserted values.
+
+Judgement only; not enforced.

@@ -655,6 +655,60 @@ Judgement only, not enforced: telling honest from dishonest needs the MIR taxono
   `__fakes__`) and are reused (LELETEST006; §17, SMELLS S9); a test module
   holds only tests, `use`, `const` (LELETEST005).
 - One test module per file; previews may keep a module in `__bevy_systems__/` (D12).
+- State comes from `testing/` (§20); each scenario is tested once, at its level (§21).
 
 Enforced in part by **`test_inline`** (inline tests only), **`no_dunder_tests`** (no tests in
-`__basic__/`), **`test_usage`** (every file), **LELETEST005/LELETEST006/LELETEST007**. Related: §17, §18, SMELLS S9.
+`__basic__/`), **`test_usage`** (every file), **LELETEST005/LELETEST006/LELETEST007**. Related: §17, §18, §20, §21, SMELLS S9.
+
+## 20. Set up tests through `testing/`
+
+Any test that needs a world, an app, or game state builds it through the crate's `testing/`
+(app builders, fixtures, queries, fakes). `testing/` exists to make tests readable; a test
+that hand-builds a `World`, a `SystemState`, or a domain object that a fixture already
+provides throws that away. If `testing/` lacks the helper, add it there (§17), do not inline it.
+
+Exceptions (narrow):
+
+1. Honest functions (plain inputs to outputs, no `World`): call them directly, corners as
+   `#[rstest]` (§18). Nothing to set up.
+2. Files inside `testing/` itself, testing their own helper.
+3. Code `testing/` itself depends on (what the app builder is built from). It still uses
+   `testing/` fixtures where it can.
+
+```rust
+// BAD: hand-built world and creature, plus a manual system-state query
+let mut world = World::new();
+world.spawn(cards::creature("Grizzly Bears", 2, 2));
+let mut states: SystemState<Query<&Power>> = SystemState::new(&mut world);
+let power = states.get(&world).single();
+// GOOD: the fixture and the crate's app builder say what the test is about
+let mut app = testing::game_with(testing::GRIZZLY_BEARS);
+let power = testing::power_of(&mut app, testing::GRIZZLY_BEARS);
+```
+
+Judgement only; not enforced. Related: §17, §18, §21, SMELLS S11.
+
+## 21. Test each scenario once, at the level that owns it
+
+A behaviour is asserted at the lowest level that can express it, and only there. Levels,
+lowest first:
+
+1. method `test_usage`: shows how to call the method, one minimal case (+ honest corners, §18);
+2. feature / rule tests: one simple test per behaviour, smallest setup that shows it;
+3. scenario tests in `tests/` (e2e dirs): several features interacting, an expected outcome,
+   detailed asserts.
+
+A higher level does not repeat a lower level's case, and a lower level does not re-run a
+higher level's scenario. When a method is only reachable through one feature and that
+feature's test covers it fully, the method's `test_usage` stays the smallest real call.
+
+Do not cross-reference duplicates with comments (`// tested also in: ...`): comments are
+banned in src/ and they rot. Remove the duplicate instead.
+
+Finding duplicates (optional audits, not gates): per-test coverage with `cargo llvm-cov`
+(a test whose covered lines are a subset of another's is a candidate), or `cargo mutants`
+(a test that kills no mutant another test does not also kill is redundant).
+
+Repo skills may name their concrete levels (e.g. verdigris-style for `MockGame`).
+
+Judgement only; not enforced. Related: §19, §20, SMELLS S12.
