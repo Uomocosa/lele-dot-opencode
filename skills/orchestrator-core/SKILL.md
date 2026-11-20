@@ -112,6 +112,11 @@ code. Include:
   frames) and describe it.
 - **Stop rule**: when to stop and ask instead of guessing (config/rule changes, behaviour or API
   changes, anything irreversible, a conflict with a rule the user stated).
+- **Test-run cap** (always in the brief and in `worker-env.md`): the same failing test (by name)
+  may run at most **3 times per job**, counting every run, with or without a fix in between.
+  Slow or outward-facing runs (e2e, anything that sends to Telegram or another service) are capped
+  at **2**. After the last allowed failure the worker stops: no more edits, no extra run. It hands
+  back, for each run, the error line, what it changed before that run, and ranked hypotheses.
 - **Gate + commit**: the full gate, then the conventional commit message (with the worker's
   Co-Authored-By trailer) and push — only if the user allowed commits; otherwise "leave the
   change uncommitted". Run each gate step once: if a hook already runs the slow suite, do not
@@ -133,9 +138,14 @@ HEAD`, read a few hunks, and LOOK at one representative preview image. Look for:
 - work done to satisfy a check rather than the rule (deleted assertions, merged statements);
 - edits outside the leash; skipped gate steps; unrequested commits;
 - defects the worker itself flagged as "open questions" — a real defect in its own work is fixed
-  now (resume it), not left for the user.
+  now (resume it), not left for the user;
+- the test-run cap: count the runs of each test in the session export. A worker over the cap is
+  stopped at once and its result counts as a failure under "Escalation on failure".
 
 Re-run the key check yourself when it is cheap: a worker's "PASS" is a claim until you see it.
+Workers run only the tests they think they touched, so tests they added can be red while they
+report green. Before every push, run the FULL suite yourself (no name filter, `--no-fail-fast`
+so you get every failure at once) and fix or brief what fails; never push on workers' filtered runs.
 When a ported or rewritten test fails where the old one passed, run the OLD one first: if it
 passes, the difference is in the port, not in production code.
 
