@@ -568,6 +568,10 @@ Judgement only; not enforced. Related: §4 (group by feature), §13 (abstraction
 A test module holds only tests, `use` and `const` (LELETEST005); everything a test needs
 besides that — an app builder, a world query, a fixture, a fake — lives in the crate's
 `src/testing/`, in `__app__/`, `__queries__/`, `__fixtures__/` or `__fakes__/` (LELETEST006).
+Besides the four roles, `src/testing/__basic__/` holds behaviour-free items (types,
+constants) shared by two or more roles. An item used by one role stays in that role (in
+that role's own `__basic__/` when behaviour-free). LELE019 does not check `src/testing/`:
+placement there follows the roles and this section.
 There is no usage-count rule: a helper used by a single test still goes there. What keeps
 `testing/` small is reuse, checked by judgement:
 
@@ -595,7 +599,7 @@ use crate::testing::lobby_row;
 let row = lobby_row(2, 0);
 ```
 
-Judgement only; the location is enforced by **LELETEST005/LELETEST006**. Related: SMELLS S9,
+Judgement only; the location is enforced by **LELETEST005/LELETEST006**. Related: SMELLS S9, S13,
 §16 (each crate adds only what it owns).
 
 ## 18. Corner cases of an honest method are `#[rstest]` cases
@@ -652,7 +656,8 @@ Judgement only, not enforced: telling honest from dishonest needs the MIR taxono
 - Tests never touch the real user environment: a test that runs a child process or writes
   config sets `HOME`/`XDG_CONFIG_HOME`/`GIT_CONFIG_GLOBAL` to a temp dir.
 - Helpers go to `testing/` role dunders (`__app__`, `__queries__`, `__fixtures__`,
-  `__fakes__`) and are reused (LELETEST006; §17, SMELLS S9); a test module
+  `__fakes__`) and are reused (LELETEST006; §17, SMELLS S9); behaviour-free items shared
+  by two or more roles go to `testing/__basic__/` (SMELLS S13); a test module
   holds only tests, `use`, `const` (LELETEST005).
 - One test module per file; previews may keep a module in `__bevy_systems__/` (D12).
 - State comes from `testing/` (§20); each scenario is tested once, at its level (§21).

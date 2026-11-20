@@ -333,3 +333,23 @@ Fix: keep the one at the level that owns it (RATIONALE §21), shrink or delete t
 Signal: grep the tests for the same fixture set + the same asserted values.
 
 Judgement only; not enforced.
+
+## S13. Single-role item in `testing/__basic__/`
+
+A behaviour-free item in `testing/__basic__/` used by only one role belongs in that role
+instead; conversely, a behaviour-free item in one role imported by another role's code
+belongs in `testing/__basic__/`.
+
+```rust
+// BAD: only __fixtures__ uses it, but it sits in the shared container
+// src/testing/__basic__/constants.rs
+pub const ALPHA_CAPACITY: usize = 8;
+// GOOD: it lives with its only user
+// src/testing/__fixtures__/__basic__/constants.rs
+pub const ALPHA_CAPACITY: usize = 8;
+```
+
+Signal: grep `testing/__basic__/` for items with a single importing role; grep each role
+for behaviour-free items imported by another role's code.
+
+Judgement only; not enforced. Related: RATIONALE §17.
