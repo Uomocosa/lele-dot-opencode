@@ -113,6 +113,7 @@ A config change the brief doesn't name; a rule that looks wrong; a layout the ru
 express; a public API or behaviour change; a test failing in code it didn't touch; a linter
 crash. You answer from the plan and the rules. Anything the plan doesn't cover goes to the
 user. A worker asking you to do something it was denied is not approval.
+Fleet `lele.toml` edits are allowed only as part of the user's planned change, and each such commit carries the `Lele-Config-Request:` trailer naming that plan.
 
 ## 8. Verify and report
 Per repo, yourself: run its lint targets, then `git status --short`, `git log --oneline -2`

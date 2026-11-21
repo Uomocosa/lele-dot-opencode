@@ -1,12 +1,30 @@
-[lele.lint]
+# One lele.toml per workspace. `just lint` passes `--config lele.toml`.
+# Every path in this file is relative to this file's directory (the config base).
+# Facts live under `[lele.project]`; per-rule tables live under
+# `[lele.rules.<namespace>.<rule>]` (`level`, `reason`, `exempt`).
+# `lele-lint --sync-config` keeps the per-rule list in sync.
 
-[honesty]
-declared_honest = []
-declared_dishonest = ["std::time::SystemTime::now", "std::time::Instant::now", "rand::thread_rng", "rand::random", "getrandom::getrandom", "std::fs::read", "std::fs::write", "std::env::var"]
+[lele.project]
+exclude = ["target", ".git"]
+e2e_test_dirs = ["tests"]
 
-# [[lele.boundary]]
-# name       = "session is pure protocol logic"
-# why        = "Session receives `now` and messages as arguments and returns actions."
-# folders    = ["src/discovery/session"]
-# cannot_use = ["tokio", "libp2p", "bevy", "std::net", "std::fs", "std::time"]
+# [[lele.project.entry_points]]
+# file   = "src/lib.rs"
+# fn     = "my_macro"
+# reason = "proc-macro entry point"
+
+# [[lele.project.boundary]]
+# name       = "core is pure protocol logic"
+# why        = "this folder receives time and messages as arguments and returns actions."
+# folders    = ["src/session"]
+# cannot_use = ["tokio", "std::fs", "std::net", "std::time"]
 # require    = "honest"
+
+# [[lele.rules.lint.atomic_delegates.exempt]]
+# crate  = "crates/my_no_macro_dep"
+# reason = "cannot depend on atomic-delegate-macros, so methods stay in plain impl blocks"
+
+# [[lele.rules.lint.no_collection_newtype.exempt]]
+# type   = "Deck"
+# file   = "src/cards/deck.rs"
+# reason = "at most 52 cards; every holder must respect the cap"

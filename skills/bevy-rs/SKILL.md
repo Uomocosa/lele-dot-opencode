@@ -25,8 +25,8 @@ the general `lele-syntax-rs` rules.
 
 ### Plugin lifecycle methods stay inline (`LELE043`)
 
-Trait impl methods follow the same `atomic_delegates` placement as inherent ones (`LELE017`),
-except the methods listed in `[[lele.lint.inline_trait_methods]]`. Every Bevy repo lists the
+Trait impl methods follow the same `atomic_delegates` placement as inherent ones (`LELECORE009`),
+except the methods listed in `[[lele.project.inline_trait_methods]]`. Every Bevy repo lists the
 `Plugin` lifecycle methods there, so `build` / `ready` / `finish` / `cleanup` are written in
 the trait impl, next to the plugin struct: the impl is the plugin's wiring manifest. Never
 delegate them, never forward them to an inherent `build_plugin` shell (`LELE043` rejects both).
@@ -34,7 +34,7 @@ The trait impl co-locates with the type (`LELE042`).
 
 ```toml
 # lele.toml
-[[lele.lint.inline_trait_methods]]
+[[lele.project.inline_trait_methods]]
 trait   = "bevy::app::Plugin"
 methods = ["build", "ready", "finish", "cleanup"]
 reason  = "plugin lifecycle methods are the plugin's wiring; read them next to the plugin struct"

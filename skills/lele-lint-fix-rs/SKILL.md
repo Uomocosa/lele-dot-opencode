@@ -7,6 +7,11 @@ description: Use when a Rust crate has lele-lint / lele-bevy-lint (LELE0xx / LEL
 
 Clear every lele lint error in ONE crate, autonomously, without changing behaviour.
 
+> **CRITICAL: NEVER change a repo's `lele.toml` unless the user specifically requested that change in this conversation.**
+> A lint error is fixed in the code, not in the config. If a rule looks wrong, or two rules seem to contradict each other, stop and show the user both diagnostics.
+> Do not add an exemption, a `level = "off"` or a `reason` on your own initiative. When the user asks, make exactly that change and put their request in the commit trailer `Lele-Config-Request: <their words>`.
+> Fixture configs under `lele-lint-test-crates/`, `rule_examples/`, `interactions/` and `tests/fixtures/` are test data; linter work may edit them.
+
 ## Setup
 Load the `lele-lint-rules-rs` skill and read it IN FULL before the first edit. A fix for one
 rule must not break another: check every file you create or edit against its
@@ -55,7 +60,7 @@ ones below:
    statements inline (`#[rustfmt::skip]` block, no constructors in it); a longer one goes
    behind an empty shell in the type's `#[atomic_delegates]` block with its body and a
    `test_usage` test in `__methods__/<type>/<fn>.rs`.
-   LELE031 (comments): never just delete a comment. First move what it says into the code:
+   LELECORE015 (comments): never just delete a comment. First move what it says into the code:
    rename the item so its name says it, or, when it explains *why* (an edge case, a format
    quirk), add an assertion to the `test_usage` test that proves it. Then delete it.
 5. `just build 2>&1` and `just test 2>&1`; repair anything you broke before continuing.

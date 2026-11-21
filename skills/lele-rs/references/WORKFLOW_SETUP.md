@@ -53,7 +53,7 @@ batch, and a batch is "green" when it adds no finding beyond the baseline.
 - A type that passes only through an exemption (e.g. a `Serialize` derive nobody uses, which
   silences `LELE026`) is a **finding**, not a pass. Never propose keeping or copying the dodge.
 - Known collisions to check: `__methods__/<type_snake>/` is keyed by type name, so two domains'
-  `Plugin` types collide under `LELE030`; `LELE012` skips `__basic__/` files but the stutter is
+  `Plugin` types collide under `LELECORE014`; `LELE012` skips `__basic__/` files but the stutter is
   still a naming defect.
 
 ## 5. Conflicts between rule sets

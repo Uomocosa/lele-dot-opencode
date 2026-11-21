@@ -110,7 +110,7 @@ Load `bevy-rs` and `lele-rs` first. This skill assumes the crate already uses
 
 ## Gotchas found in the first trial (2026-11-17)
 
-- **The lint gate is red while a sketch exists.** lele-lint flags `LELE002` (the dir
+- **The lint gate is red while a sketch exists.** lele-lint flags `LELECORE002` (the dir
   `__ui_sketch__` is not snake_case) and `LELE023` (`#[cfg(test)] mod` inside `mod.rs`). So
   while sketching, gate only on clippy plus the sketch test, not on `just check-crate` or
   `just lint`. **No commits** in the repo until lock-in removes the sketch, because the prek

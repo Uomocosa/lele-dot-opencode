@@ -9,6 +9,11 @@ description: Use for Rust code in this project — naming, design review, atomic
 > `read` `references/RATIONALE.md` and `references/SMELLS.md` (both, in full).
 > The `skill` tool does not inline them; this file is not a substitute.
 
+> **CRITICAL: NEVER change a repo's `lele.toml` unless the user specifically requested that change in this conversation.**
+> A lint error is fixed in the code, not in the config. If a rule looks wrong, or two rules seem to contradict each other, stop and show the user both diagnostics.
+> Do not add an exemption, a `level = "off"` or a `reason` on your own initiative. When the user asks, make exactly that change and put their request in the commit trailer `Lele-Config-Request: <their words>`.
+> Fixture configs under `lele-lint-test-crates/`, `rule_examples/`, `interactions/` and `tests/fixtures/` are test data; linter work may edit them.
+
 `lele_lint` enforces every rule that can be checked; each diagnostic carries a code —
 `LELE0xx` from `lele-lint`, `LELEBEVY0xx` from `lele-bevy-lint` (`lele-lint --rule-list`,
 `lele-bevy-lint --rule-list`). The old `E0xx` scheme is retired. This file is the mental
@@ -22,10 +27,10 @@ model plus how to use the linter. Do not memorise rules: ask the linter, and rea
 - **Atomic files.** One primary item per file, named after it (`config.rs` holds
   `pub struct Config`). A free `pub fn` in `src/` is an error (`no_free_functions`): make it
   a method of its first argument's type or of its return type (a newtype if neither is a
-  crate type); `__bevy_systems__/` and `[[lele.lint.entry_points]]` are exempt.
+  crate type); `__bevy_systems__/` and `[[lele.project.entry_points]]` are exempt.
 - **Struct + delegate shells.** `<type>.rs` holds the struct, its `impl Default`, and the
   empty-bodied shells; bodies live in the crate-root `__methods__/<type_snake>/<method>.rs`
-  (`LELE030` — mounted in `lib.rs` as `#[path = "../__methods__/mod.rs"] mod methods;`,
+  (`LELECORE014` — mounted in `lib.rs` as `#[path = "../__methods__/mod.rs"] mod methods;`,
   private and never re-exported — bodies are reached through their type's methods, never
   `methods::…`; a one-liner, or a single simple `match`/`if`/loop, is inlined instead). One
   `#[atomic_delegates]` block per `impl_item_order` group — constructor shells, `pub`
@@ -65,11 +70,11 @@ impl UnixTime {
 }
 ```
 
-- **Dunder folders** are linter-enforced layout folders (`LELE038`: mounted with
+- **Dunder folders** are linter-enforced layout folders (`LELECORE018`: mounted with
   `#[path = ".../mod.rs"]` and named without the dunders everywhere in code — `basic`,
   never `__basic__`). One public path per item: `basic` items are re-exported flat from
   the domain (`RATIONALE` §4); traits and systems keep the folder in their path and are
-  never re-exported (`LELE038`/`LELEBEVY001`). Two kinds; the code dunders are fully
+  never re-exported (`LELECORE018`/`LELEBEVY001`). Two kinds; the code dunders are fully
   linted and hold one item per file:
   - **`__basic__/` (container)** — behaviour-free types by role (plain
     structs/enums/newtypes/aliases/markers), mounted `#[path = "__basic__/mod.rs"]
@@ -81,7 +86,7 @@ impl UnixTime {
     `#[path = "__traits__/mod.rs"] pub mod traits;` (or `pub(crate)`) and never
     re-exported — callers write `domain::traits::Greetable` and import it with
     `use crate::domain::traits::Greetable;` to call its methods (`pub use traits::…;` is a
-    `LELE038` error); never a `Trait` suffix — the folder says it.
+    `LELECORE018` error); never a `Trait` suffix — the folder says it.
   - **`__bevy_systems__/` (code)** — Bevy systems (`LELEBEVY002`), mounted
     `#[path = "__bevy_systems__/mod.rs"] pub mod bevy_systems;` (or `pub(crate)`) and
     never re-exported (`LELEBEVY001`); Rust paths stay
@@ -90,11 +95,11 @@ impl UnixTime {
   the file that defines the type (`cfg(feature)` impls included); blanket impls and impls
   for foreign types live in the trait's `__traits__/` file. A `__basic__` type is a
   container item and keeps no impls — graduate it to its own `<type>.rs` first.
-- **Trait impl methods are placed like inherent ones** (`LELE017`): one-liner, simple block,
+- **Trait impl methods are placed like inherent ones** (`LELECORE009`): one-liner, simple block,
   or `__methods__/<type>/<trait>_<method>.rs` (prefix dropped when the method already starts
   with the trait name: `from_celsius.rs`, `visit_item_mod.rs`). A per-method shell names its
   trait: `#[atomic_delegate(Foo, Rule)]`. Exempt: `impl Default`, and methods listed in
-  `[[lele.lint.inline_trait_methods]]`, which must stay inline (`LELE043`).
+  `[[lele.project.inline_trait_methods]]`, which must stay inline (`LELE043`).
 - **Imports.** Import the domain and qualify: `use crate::stock;` then `stock::Item`.
   The one exception is a trait: import it with `use crate::stock::traits::Greetable;`
   so its methods are callable. `super::` is allowed only inside `#[cfg(test)]`;
@@ -130,12 +135,12 @@ impl UnixTime {
   A ban on `From<primitive>` was dropped: it is advice, not a lint (RATIONALE §14).
 - **Collection wrappers.** No newtype around a collection unless it guards an invariant every
   holder must respect (`Deck(Vec<Card>)`, at most 52 cards): then ask the user for a
-  `[[lele.lint.collection_wrappers]]` entry, keep the field private, derive `Deref` but not
+  `[[lele.rules.lint.no_collection_newtype.exempt]]` entry, keep the field private, derive `Deref` but not
   `DerefMut` (RATIONALE §14).
 - **Body placement.** A one-liner goes inline under `#[rustfmt::skip]`; a single simple
   `match`/`if`/loop or a 2–3 statement body goes inline in a plain `impl` block; anything else
   goes to `__methods__/`. Never pad a body or change a signature to keep a file. Only the
-  user may add `[[lele.lint.no_delegates]]` (RATIONALE §15).
+  user may add `[[lele.rules.lint.atomic_delegates.exempt]]` (RATIONALE §15).
 - **Abstraction level.** A `struct`/`enum` name is a noun (the object), a `fn` name is a verb
   (the action), a `bool` is a question; only a *domain concept* name is short (1–2 words);
   internal machinery — even `pub`, which atomic files make almost everything — is named as
@@ -158,9 +163,16 @@ just lint                 # or: lele-lint --config lele.toml <crate>
 - One root `lele.toml` + `clippy.toml` per workspace; boundary `folders` are workspace-relative
   (the config file's directory is the base).
 - `--sync-methods` (or `just sync-methods`) regenerates the `__methods__/mod.rs` indexes after you add delegates.
-- A `[[lele.boundary]]` has two checks: imports (`cannot_use`; `boundary_imports`) and honesty
+- A `[[lele.project.boundary]]` has two checks: imports (`cannot_use`; `boundary_imports`) and honesty
   (`require = "honest"`; `lele_function_taxonomy`). Ubiquitous language is guidance
   only — the linter does not check names.
+- `lele.toml` has two kinds of entry: `[lele.project]` facts several rules read, and
+  `[lele.rules.<namespace>.<rule>]` tables (`level`, `reason`, `exempt`) where the namespace
+  is `lint`, `bevy`, or a crate-local one such as `verdigris`. Every rule is listed, and
+  `lele-lint --sync-config` keeps the list in sync (`--check` in `just lint`). `LELECORE*`
+  rules are locked: never `off`, only exempted per path with a reason; an exemption may say
+  `replaced_by = "<rule>"`, and one that suppresses nothing is an error. Every run prints a
+  "lele.toml relaxes rules" banner; `lele-lint --config-report` prints the full table.
 
 ## 3. `#[allow(clippy::…)]` gate
 

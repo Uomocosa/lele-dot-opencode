@@ -9,6 +9,11 @@ Goal: code that stays easy to understand over time — honest names, deep abstra
 Every batch is a small, behaviour-preserving step with an approval gate at **both** ends.
 **Never auto-carry into the next batch.**
 
+> **CRITICAL: NEVER change a repo's `lele.toml` unless the user specifically requested that change in this conversation.**
+> A lint error is fixed in the code, not in the config. If a rule looks wrong, or two rules seem to contradict each other, stop and show the user both diagnostics.
+> Do not add an exemption, a `level = "off"` or a `reason` on your own initiative. When the user asks, make exactly that change and put their request in the commit trailer `Lele-Config-Request: <their words>`.
+> Fixture configs under `lele-lint-test-crates/`, `rule_examples/`, `interactions/` and `tests/fixtures/` are test data; linter work may edit them.
+
 ## Invocation
 
 - `/refactor-workflow-rs {crates} [--lens lint|name|shape]` — default: all three lenses.
@@ -22,7 +27,7 @@ Run `~/.config/opencode/skills/lele-rs/references/WORKFLOW_SETUP.md` in full, an
 ## 2. Scope
 
 - `crates` = the argument list; empty means the whole workspace.
-- Enumerate from `lele.toml` (respect `[lele.config] exclude`) and/or dirs with `Cargo.toml`. Add
+- Enumerate from `lele.toml` (respect `[lele.project] exclude`) and/or dirs with `Cargo.toml`. Add
   any path-dependency crate that shares serialized types. Never invent a crate. Echo the list.
 
 ## 3. Audit — three lenses

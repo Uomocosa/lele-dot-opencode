@@ -11,6 +11,11 @@ description: Use for ANY Rust work in this workspace. Load lele-syntax-rs first,
 > `~/.config/opencode/skills/lele-syntax-rs/references/SMELLS.md` in full.
 > Loading *this* file is not the gate; the two reads are.
 
+> **CRITICAL: NEVER change a repo's `lele.toml` unless the user specifically requested that change in this conversation.**
+> A lint error is fixed in the code, not in the config. If a rule looks wrong, or two rules seem to contradict each other, stop and show the user both diagnostics.
+> Do not add an exemption, a `level = "off"` or a `reason` on your own initiative. When the user asks, make exactly that change and put their request in the commit trailer `Lele-Config-Request: <their words>`.
+> Fixture configs under `lele-lint-test-crates/`, `rule_examples/`, `interactions/` and `tests/fixtures/` are test data; linter work may edit them.
+
 This is the entrypoint for all Rust work. Read this file first, then load the leaf skill that matches your task. v2 has no `instructions[]` binding: `AGENTS.md` is the always-loaded content, and skills are advertised by `description` and loaded on demand via the `skill` tool.
 
 ## Leaf Skills
@@ -38,7 +43,7 @@ This is the entrypoint for all Rust work. Read this file first, then load the le
 | Workflow skills (`refactor-*-rs`, `plan-remove-dead-code-rs`) — blocking setup: skills, reads, baseline lint, proof block | `references/WORKFLOW_SETUP.md` |
 
 **`lele:taxonomy_check`** runs `lele_function_taxonomy` (a rustc-MIR driver). It checks only
-`[[lele.boundary]]` folders with `require = "honest"`: every function physically inside must reach hidden
+`[[lele.project.boundary]]` folders with `require = "honest"`: every function physically inside must reach hidden
 I/O (clock, fs, net, env, process, randomness, non-`Freeze` globals, `thread_local!`) only through its
 signature. It exits instantly when no honest boundary is configured (so most crates pay nothing). Logging
 (`tracing`/`log` callsites) is treated as honest. A finding is `TAX001`; bad config is `TAX002`.

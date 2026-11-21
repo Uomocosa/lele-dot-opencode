@@ -178,7 +178,7 @@ Trigger: `pub` item whose body is a single call at the same abstraction level; a
 no invariant and no role. Counter-indication — do **not** flag: `#[atomic_delegates]` shells
 (one-line by design; `method_file_co_location` mandates the split — RATIONALE §13 *Limits*),
 a thin adapter at an I/O boundary (RATIONALE §3), a shape-only item (`impl From`, `Deref`,
-trait impl), or a deliberate seam for a `[[lele.boundary]]`.
+trait impl), or a deliberate seam for a `[[lele.project.boundary]]`.
 
 Judgement only. No lint rule is planned for this — a mechanical check ("`pub fn` whose sole
 statement calls an item with an identical parameter list") was considered and rejected as too

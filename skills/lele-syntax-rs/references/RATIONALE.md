@@ -36,7 +36,7 @@ forwarder **on purpose** (`method_file_co_location` requires the split); shape-o
 (`From`, `Deref`, trait impls) and thin I/O adapters (§3) are likewise exempt from this
 depth limit. (Placement is a separate matter: trait impl methods ARE placed by
 `atomic_delegates` like inherent ones — only `impl Default` and methods listed in
-`[[lele.lint.inline_trait_methods]]` stay inline.) Deleting an
+`[[lele.project.inline_trait_methods]]` stay inline.) Deleting an
 atomic delegate is deleting the architecture, not an abstraction (§13, *Limits*).
 
 Enforced in part by **`helpers_are_methods`** (no private `fn`: a helper is a `pub(crate)` method
@@ -86,7 +86,7 @@ Ref: Fowler, [UbiquitousLanguage](https://martinfowler.com/bliki/UbiquitousLangu
 Put the decisions in a pure core that receives inputs and returns outputs/commands, and
 keep I/O, clocks, sockets and frameworks in a thin shell that drives the core and executes
 its commands. Core folders are named after the domain; adapter folders are named after
-the technology they talk to. A `[[lele.boundary]]` has **two** checks: lele_lint **`boundary_imports`**
+the technology they talk to. A `[[lele.project.boundary]]` has **two** checks: lele_lint **`boundary_imports`**
 forbids the imports in `cannot_use`, and `lele_function_taxonomy` proves the folder's
 functions are honest (`require = "honest"` — no hidden I/O reached through local calls).
 
@@ -101,7 +101,7 @@ Cockburn, [Hexagonal architecture](https://alistair.cockburn.us/hexagonal-archit
 
 The top-level source tree should name the features of the system, not the framework that
 delivers it. `src/stock/`, `src/roster/`; never `src/handlers/`, `src/models/`. The three
-deliberate exceptions in this workspace are the dunder layout folders (`LELE038`): the
+deliberate exceptions in this workspace are the dunder layout folders (`LELECORE018`): the
 container `__basic__/` (behaviour-free types do not each need a file and a test) and the
 code dunders `__methods__/` (hide delegate bodies until they are needed) and
 `__bevy_systems__/` (all systems of a domain are found in one place, mounted
@@ -113,7 +113,7 @@ re-exported flat from the domain `mod.rs` (`pub use basic::enums::HelloKind;` �
 `domain::HelloKind`): a basic type graduates to its own `<type>.rs`, and the flat path
 survives that graduation, while a `pub mod basic;` mount would leak a second path that
 breaks the day the type moves. Traits and systems cannot move — `__traits__/` and
-`__bevy_systems__/` are `pub` (or `pub(crate)`) mounts, never re-exported (`LELE038`,
+`__bevy_systems__/` are `pub` (or `pub(crate)`) mounts, never re-exported (`LELECORE018`,
 LELEBEVY001) — so `domain::traits::Greetable` and `domain::bevy_systems::poll_events`
 stay as permanent as the flat path. Every public path is then permanent and unique.
 
@@ -250,7 +250,7 @@ protocol or session as a machine keeps it in one folder, `{{domain}}::state_mach
   `fn hello(&State) -> Hello`, `fn publish_target(&State) -> Option<PublishTarget>`.
 - **Other types are allowed** inside `state_machine/` (per-domain enums/structs such as `Hello`,
   `PublishTarget`) — only `State`/`Input`/`Output`/`update` are fixed.
-- The folder stays an honest boundary: a `[[lele.boundary]]` with `require = "honest"` and
+- The folder stays an honest boundary: a `[[lele.project.boundary]]` with `require = "honest"` and
   `cannot_use = ["tokio", "libp2p", "bevy", "std::net", "std::fs", "std::time"]`.
 
 Worked example: `freenet_libp2p_bevy_plugin/src/discovery/state_machine/`. Language-agnostic
@@ -423,7 +423,7 @@ pub fn read_config(path: &Path) -> Result<Config, Error> {
 
 - **Atomic-delegate shells** (`#[atomic_delegates]` `impl` blocks whose bodies live in
   the crate-root `__methods__/<type>/<method>.rs`) are one-line forwarders **by definition**;
-  the split is mandated by **`LELE030`** (`method_file_co_location`), not chosen as a design.
+  the split is mandated by **`LELECORE014`** (`method_file_co_location`), not chosen as a design.
   Judging a delegate shell as a pass-through would delete the architecture — it is shape, not
   an abstraction. Same standing as the `__methods__/`, `__basic__/` and `__bevy_systems__/`
   exceptions in §4.
@@ -487,7 +487,7 @@ cap, an ordering, uniqueness. `Deck(Vec<Card>)` with at most 52 cards is such a 
 refusing it would throw away a good abstraction. The test: can you state the rule in one
 sentence, and would breaking it be a bug? If yes:
 
-1. Ask the user for a `[[lele.lint.collection_wrappers]]` entry in `lele.toml` (`type`,
+1. Ask the user for a `[[lele.rules.lint.no_collection_newtype.exempt]]` entry in `lele.toml` (`type`,
    `file`, `reason` — the reason is that one sentence; `file` is relative to `lele.toml`). The
    entry is the user's decision, never the agent's. Bevy `Resource` types are exempt: Bevy
    needs a named type for them.
@@ -523,17 +523,17 @@ The linter asks rustfmt, not the author's line breaks, which home a method body 
 - **Anything else** lives in `__methods__/<type>/<method>.rs` with a real `test_usage`.
 
 When the linter reports a delegate that is a one-liner or a single simple block
-(`methods_layout`, LELE030), inline it in the type file and delete the file. **Never** split
+(`methods_layout`, LELECORE014), inline it in the type file and delete the file. **Never** split
 one statement into `let x = <expr>; <use of x>`, add a guard that does nothing, or change a
 method's signature (for example make it return a value) to reach more statements: that
 satisfies the check and defeats the rule.
 
-`[[lele.lint.no_delegates]]` (crate plus reason) is the one exception: a crate that cannot
+`[[lele.rules.lint.atomic_delegates.exempt]]` (crate plus reason) is the one exception: a crate that cannot
 depend on `atomic-delegate-macros` (for example `lele-snake-case`) may keep the
 anything-else methods in a plain `impl` block. The entry is the user's decision, never the
 agent's.
 
-Enforced: `atomic_delegates` (LELE017), `methods_layout` (LELE030).
+Enforced: `atomic_delegates` (LELECORE009), `methods_layout` (LELECORE014).
 
 ## 16. Each crate adds only what it owns
 
@@ -634,7 +634,7 @@ Judgement only, not enforced: telling honest from dishonest needs the MIR taxono
 
 ## 19. How to write tests here
 
-- One `test_usage` per file (LELETEST007), no length cap. It shows real use:
+- One `test_usage` per file (LELECORE007), no length cap. It shows real use:
   | file | `test_usage` shows |
   |---|---|
   | `<type>.rs` | constructs the type / calls one of its methods |
@@ -643,7 +643,7 @@ Judgement only, not enforced: telling honest from dishonest needs the MIR taxono
   | inline one-liner in `<type>.rs` | covered by the struct's `test_usage` |
   | `__basic__/`, plain data, `__bevy_systems__/` | no tests |
 - Never `let _ = method;` or `assert!(true)` — the call and an assertion on what it
-  produced (or its receiver, when it returns `()`) are the test (LELETEST007).
+  produced (or its receiver, when it returns `()`) are the test (LELECORE007).
 - Other tests in the file are free-named corner cases; they are not `test_usage`.
 - Constants are tuned in `constants.rs`, never asserted (D8): assert the behaviour.
 - Honest method corners: one `#[rstest]` with `#[case]` rows (§18).
@@ -663,7 +663,7 @@ Judgement only, not enforced: telling honest from dishonest needs the MIR taxono
 - State comes from `testing/` (§20); each scenario is tested once, at its level (§21).
 
 Enforced in part by **`test_inline`** (inline tests only), **`no_dunder_tests`** (no tests in
-`__basic__/`), **`test_usage`** (every file), **LELETEST005/LELETEST006/LELETEST007**. Related: §17, §18, §20, §21, SMELLS S9.
+`__basic__/`), **`test_usage`** (every file), **LELETEST005/LELETEST006/LELECORE007**. Related: §17, §18, §20, §21, SMELLS S9.
 
 ## 20. Set up tests through `testing/`
 
