@@ -1,6 +1,6 @@
 ---
 name: orchestrator-core
-description: Shared rules for every orchestrator skill (opencode-orchestrator, claude-code-self-orchestrator) — the orchestrator role, the SmartWorker vs EfficientWorker choice per task, briefing, verifying, deciding, cost tracking and reporting. Loaded by those skills; not invoked on its own.
+description: Shared rules for every orchestrator skill (opencode-orchestrator, claude-code-self-orchestrator) — the orchestrator role, the FREE_MODEL / EFFICIENT_MODEL / SMART_MODEL tiers (the only place model ids live), briefing, verifying, deciding, cost tracking and reporting. Loaded by those skills; not invoked on its own.
 ---
 
 # How an orchestrator behaves
@@ -13,21 +13,38 @@ verifying, never on bulk edits.
 HOW a worker is launched, resumed and read is in the calling skill (`opencode-orchestrator` or
 `claude-code-self-orchestrator`). Everything else is here.
 
-## 0. Two workers: pick one per task (per run, not per request)
+## 0. Model tiers (the ONLY place model ids live)
 
-| Worker | Use for | opencode | Claude Code |
+Every orchestrator skill names a tier, never a model id. To change a model everywhere, edit
+this table.
+
+| Tier | Use for | opencode | Claude Code |
 |---|---|---|---|
-| **SmartWorker** | needs judgement: diagnosis, root cause, "why does X differ from Y", planning a change of more than ~3 files, choosing between designs, reviewing | `opencode-go/deepseek-v4.1-flash#low` | `model: "sonnet"`, `effort: "low"` |
-| **EfficientWorker** | fully specified mechanical work: deletions from a checked list, renames, lint fixes, applying an approved plan, docs updates | `opencode-go/muse-spark-1.3-contributor#low` | `model: "haiku"`, `effort: "low"` |
+| **FREE_MODEL** | parallel read-only fan-out: proposals, surveys, searches; also simple fully specified edits when the request allows it | `opencode-go/hy4-flash-free` | none: use EFFICIENT_MODEL |
+| **EFFICIENT_MODEL** | fully specified mechanical work: deletions from a checked list, renames, lint fixes, applying an approved plan, docs updates | `opencode-go/muse-spark-1.3-contributor#low` | `model: "haiku"`, `effort: "low"` |
+| **SMART_MODEL** | needs judgement: diagnosis, root cause, "why does X differ from Y", planning a change of more than ~3 files, choosing between designs, reviewing | `opencode-go/deepseek-v4.1-flash#low` | `model: "sonnet"`, `effort: "low"` |
 
-- Decide before every launch. Write the choice and a one-line reason in the plan file.
-- A step that mixes both: SmartWorker writes the plan (read-only), EfficientWorker applies it.
-- In doubt → SmartWorker. Measured 2026-11-15 (freenet-libp2p-bevy-plugin F7, Claude Code):
+(Old names: SmartWorker = SMART_MODEL worker, EfficientWorker = EFFICIENT_MODEL worker.)
+
+- Decide before every launch. Write the tier and a one-line reason in the plan file.
+- A step that mixes both: a SMART_MODEL worker writes the plan (read-only), an EFFICIENT_MODEL
+  worker applies it.
+- In doubt → SMART_MODEL. Measured 2026-11-15 (freenet-libp2p-bevy-plugin F7, Claude Code):
   Haiku used ~2× the tokens and ~5× the tool calls of Sonnet on comparable steps (retries and
   reruns), with the same wall time; Sonnet refuted a wrong orchestrator hypothesis with evidence.
   Sonnet costs ~3× per token, so roughly 1.5× per task.
-- `--worker smart|efficient` in the request forces one; `--model` (and `--effort`) forces an
-  exact model. Strip these flags from the task text.
+
+### Overrides in the request (strip them from the task text)
+
+- `--free <id>` / `--efficient <id>` / `--smart <id>`: replace that tier's model for this run.
+- `--worker free|efficient|smart` or "use only efficient models": every launch uses that tier.
+- `<phase>=<tier>` (e.g. `implement=free`, "implement with free or efficient workers"): limits
+  one phase to those tiers.
+- `--model <id>` (and `--effort`) forces an exact model for every launch.
+- Plain-language overrides mean the same as the flags. Record the resolved tiers (tier → model)
+  at the top of the plan file and in the report.
+- An override that forbids a tier also forbids escalating to it: after the retry fails, stop
+  and bring it to the user instead.
 
 ### Escalation on failure
 
@@ -39,9 +56,9 @@ When a worker fails (wrong result, stuck, or "blocked"), after the FIRST failure
    wrong; a better model with the same framing fails more expensively.
 2. **The retry gets a sharper brief**: the hypotheses and the one experiment that tells them
    apart.
-3. If an EfficientWorker failed on a task that turned out to need judgement, the retry runs on
-   SmartWorker (read-only first if it is a diagnosis, writing findings to a file). Say so in your
-   next report to the user.
+3. If an EFFICIENT_MODEL (or FREE_MODEL) worker failed on a task that turned out to need
+   judgement, the retry runs on SMART_MODEL (read-only first if it is a diagnosis, writing
+   findings to a file). Say so in your next report to the user.
 4. **If the retry fails too, stop and bring it to the user** with the evidence and options.
    Never climb to a bigger model or a higher effort on your own.
 
@@ -72,7 +89,7 @@ The orchestrator splits the work; a worker never gets more than one job.
 
 - **One job = one concern, one commit**, about ≤ 8 files edited and ≤ ~45 min of work. A brief
   that says "commit 1, then 2, then 3" is too big: write three briefs, run them one after another.
-- Plan-sized requests: SmartWorker plans (read-only), then one EfficientWorker job per commit of
+- Plan-sized requests: SMART_MODEL plans (read-only), then one EFFICIENT_MODEL job per commit of
   that plan, each with its own leash (the exact files of that commit).
 - After every job the orchestrator reads the diff before the next job starts. A worker that
   diverged costs one job, not the whole request.
@@ -82,9 +99,12 @@ The orchestrator splits the work; a worker never gets more than one job.
 | Tier | Who runs it | What |
 |---|---|---|
 | fast | the editing worker, every job | build/check + clippy + lint of the crates it touched (foreground) |
-| full | once per batch of jobs: the orchestrator, or a dedicated **verify worker** (EfficientWorker, read-only + run gates, writes a gate report) | full unit suite, slow e2e suites, pre-push hooks |
+| full | once per batch of jobs: the orchestrator, or a dedicated **verify worker** (EFFICIENT_MODEL, read-only + run gates, writes a gate report) | full unit suite, slow e2e suites, pre-push hooks |
 
 - Editing jobs commit locally after the fast tier; **push only after the full tier is green**.
+- **Branches: stay on the current branch.** Never create, switch, rebase onto or merge into
+  another branch (main included); the user does that personally. Report it as "committed and
+  pushed on the current branch `<name>`".
 - A full-tier failure → bisect over the batch's commits (orchestrator or verify worker), then a
   fix job for the culprit commit.
 - Slow suites never run inside an editing job unless the job is about that suite.
@@ -126,8 +146,8 @@ code. Include:
 
 ### Plan first for anything bigger than ~3 files or with an open design
 
-Run a read-only SmartWorker plan, check it against your map and acceptance checks, then let the
-editing worker (often EfficientWorker) apply the approved plan.
+Run a read-only SMART_MODEL plan, check it against your map and acceptance checks, then let the
+editing worker (often EFFICIENT_MODEL) apply the approved plan.
 
 ## 3. Verify — never trust the self-report
 
